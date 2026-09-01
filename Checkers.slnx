@@ -1,0 +1,24 @@
+<Solution>
+  <Project Path="Application/Application.csproj" Id="b6013739-ee6c-4057-ab0f-fd6c8ef25cc4">
+    <BuildDependency Project="Persistence/Persistence.csproj" />
+    <BuildDependency Project="Shared/Shared.csproj" />
+    <BuildDependency Project="UnitTests/UnitTests.csproj" />
+  </Project>
+  <Project Path="Client/Client.csproj" Id="ec35755c-b675-41d4-9bf4-b783f863f490">
+    <BuildDependency Project="Shared/Shared.csproj" />
+  </Project>
+  <Project Path="Domain/Domain.csproj" Id="f9970f25-5889-4faf-9593-743a14c366b1">
+    <BuildDependency Project="Shared/Shared.csproj" />
+  </Project>
+  <Project Path="Persistence/Persistence.csproj" Id="20a21a67-52b6-4f61-a648-556261d35d30">
+    <BuildDependency Project="Domain/Domain.csproj" />
+  </Project>
+  <Project Path="Server/Server.csproj">
+    <BuildDependency Project="Application/Application.csproj" />
+    <BuildDependency Project="Shared/Shared.csproj" />
+  </Project>
+  <Project Path="Shared/Shared.csproj" Id="7ee23682-6887-4493-9f6a-1ddd0a40d431">
+    <BuildDependency Project="UnitTests/UnitTests.csproj" />
+  </Project>
+  <Project Path="UnitTests/UnitTests.csproj" Id="4e322395-844d-4906-bcaf-cb6fb1078545" />
+</Solution>
