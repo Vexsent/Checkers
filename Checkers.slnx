@@ -1,4 +1,9 @@
 <Solution>
+  <Folder Name="/Git/">
+    <File Path=".gitignore" />
+    <File Path="LICENSE" />
+    <File Path="README.md" />
+  </Folder>
   <Project Path="Application/Application.csproj" Id="b6013739-ee6c-4057-ab0f-fd6c8ef25cc4">
     <BuildDependency Project="Persistence/Persistence.csproj" />
     <BuildDependency Project="Shared/Shared.csproj" />
@@ -6,6 +11,7 @@
   </Project>
   <Project Path="Client/Client.csproj" Id="ec35755c-b675-41d4-9bf4-b783f863f490">
     <BuildDependency Project="Shared/Shared.csproj" />
+    <Deploy Solution="Debug|*" />
   </Project>
   <Project Path="Domain/Domain.csproj" Id="f9970f25-5889-4faf-9593-743a14c366b1">
     <BuildDependency Project="Shared/Shared.csproj" />

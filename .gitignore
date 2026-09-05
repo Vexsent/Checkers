@@ -57,3 +57,14 @@ TestResult.xml
 nunit-*.xml
 
 .vs/*
+
+# MemPalace per-project files (issue #185)
+mempalace.yaml
+entities.json
+
+#AI Models
+.claude/*
+.mempalace/*
+
+/research
+/documentation

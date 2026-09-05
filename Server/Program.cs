@@ -1,29 +1,40 @@
-public partial class Program
+using Checkers.Application.Core.Extensions;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+
+//DbContext
+builder.Services.AddCheckersDbContext(builder.Configuration.GetConnectionString("CheckersDb")!);
+
+// Controllers
+builder.Services.AddControllers();
+
+// AutoMapper
+builder.Services.AddAutoMapper(opt =>
 {
-	private static void Main(string[] args)
-	{
-		var builder = WebApplication.CreateBuilder(args);
+	opt.LicenseKey = builder.Configuration.GetSection("AutoMapper:LicenseKey").Value;
+});
 
-		// Add services to the container.
+//Services
 
-		builder.Services.AddControllers();
-		// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-		builder.Services.AddOpenApi();
+//Repositories
 
-		var app = builder.Build();
+// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+builder.Services.AddOpenApi();
 
-		// Configure the HTTP request pipeline.
-		if (app.Environment.IsDevelopment())
-		{
-			app.MapOpenApi();
-		}
+var app = builder.Build();
 
-		app.UseHttpsRedirection();
-
-		app.UseAuthorization();
-
-		app.MapControllers();
-
-		app.Run();
-	}
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+	app.MapOpenApi();
 }
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
