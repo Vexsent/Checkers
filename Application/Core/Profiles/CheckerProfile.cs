@@ -11,6 +11,10 @@ namespace Checkers.Application.Core.Profiles
 			CreateMap<User, UserDto>()
 				.ForMember(dest => dest.Name, opt => opt.Ignore())
 				.ReverseMap();
+
+			CreateMap<RegisterRequestDto, User>()
+				.ForMember(dest => dest.PasswordHash, opt => opt.Ignore());
+
 		}
 	}
 }

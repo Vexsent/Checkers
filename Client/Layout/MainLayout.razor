@@ -1,0 +1,31 @@
+@inherits LayoutComponentBase
+
+<RadzenLayout>
+    <RadzenHeader Style="height: 60px;">
+        <div class="d-flex align-items-center justify-content-between h-100 px-4">
+            <UnauthorizeView>
+                <RadzenButton Icon="menu" title="Sign Up" Size="ButtonSize.Small" Click="@(() => OpenRegisterDialog())" />
+            </UnauthorizeView>
+            <AuthorizeView>
+@*                 // Add your authorized user content here, such as a logout button or user profile link.
+ *@            </AuthorizeView>
+        </div>
+    </RadzenHeader>
+    <RadzenSidebar @bind-Expanded="@sidebarExpanded" Style="width: 250px;">
+        <NavMenu />
+    </RadzenSidebar>
+    <RadzenBody>
+        <div class="top-row px-4">
+            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+        </div>
+        <article class="content px-4">
+            @Body
+        </article>
+    </RadzenBody>
+    <RadzenFooter Style="height: 60px;">
+        <div class="d-flex align-items-center justify-content-between h-100 px-4">
+            <span>&copy; 2024 - My Application</span>
+        </div>
+    </RadzenFooter>
+</RadzenLayout>
+

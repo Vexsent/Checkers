@@ -1,0 +1,4 @@
+<AuthorizeView Roles="@Roles" Policy="@Policy" Resource="@Resource">
+    <NotAuthorized>@ChildContent?.Invoke(context)</NotAuthorized>
+    <Authorizing>@Authorizing</Authorizing>
+</AuthorizeView>

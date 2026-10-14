@@ -1,5 +1,4 @@
 using AutoMapper;
-using Checkers.Application.Core;
 using Checkers.Application.Core.Services;
 using Checkers.Domain.Entities;
 using Checkers.Persistence.Data.IRepositories;
@@ -14,6 +13,8 @@ namespace Checkers.Application.Core.Authorization
 		IJwtTokenService tokenService,
 		IMapper mapper) : IAuthService
 	{
+		private readonly IMapper _mapper = mapper;
+
 		public async Task<AuthResult> RegisterAsync(RegisterRequestDto request)
 		{
 			var errors = new List<string>();
@@ -26,15 +27,8 @@ namespace Checkers.Application.Core.Authorization
 			if (errors.Count > 0)
 				return AuthResult.Failed(errors);
 
-			var user = new User
-			{
-				Username = request.Username,
-				Email = request.Email,
-				FirstName = request.FirstName,
-				LastName = request.LastName,
-				MiddleName = request.MiddleName,
-				NickName = request.NickName,
-			};
+			var user = _mapper.Map<User>(request);
+
 			user.PasswordHash = passwordHasher.Hash(user, request.Password);
 
 			await userRepository.AddAsync(user);

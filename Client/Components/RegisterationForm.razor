@@ -1,0 +1,10 @@
+<RadzenStack Orientation="Orientation.Vertical" Style="width: 100%; max-width: 400px; margin: auto;">
+    <RadzenTemplateForm Data="@User" TItem="RegisterRequestDto" Submit="@OnSubmit">
+        <RadzenFieldset Text="User Registration">
+            <RadzenTextBox @bind-Value="@User.Username" Name="Username" Placeholder="Enter your username" Style="width: 100%;" />
+            <RadzenTextBox @bind-Value="@User.Email" Name="Email" Placeholder="Enter your email" Style="width: 100%;" />
+            <RadzenPassword @bind-Value="@User.Password" Name="Password" Placeholder="Enter your password" Style="width: 100%;" />
+            <RadzenButton Text="Register" ButtonType="ButtonType.Submit" Style="margin-top: 10px;" />
+        </RadzenFieldset>
+    </RadzenTemplateForm>
+</RadzenStack>
