@@ -1,8 +1,43 @@
+using System.Text;
 using Checkers.Application.Core.Extensions;
+using Checkers.Application.Core.Options;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+
+var appOptions = builder.Configuration.GetSection(AppOptions.SectionName).Get<AppOptions>()
+	?? throw new InvalidOperationException($"Missing '{AppOptions.SectionName}' configuration section.");
+var jwtOptions = appOptions.Jwt;
+
+//Authentication
+builder.Services
+	.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+	.AddJwtBearer(options =>
+	{
+		options.TokenValidationParameters = new TokenValidationParameters
+		{
+			ValidateIssuer = true,
+			ValidIssuer = jwtOptions.Issuer,
+			ValidateAudience = true,
+			ValidAudience = jwtOptions.Audience,
+			ValidateLifetime = true,
+			ValidateIssuerSigningKey = true,
+			IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
+		};
+	});
+
+builder.Services.AddAuthorization(options =>
+{
+	// Secure by default: every endpoint requires an authenticated user unless it's
+	// explicitly marked [AllowAnonymous] (register/login) or [Authorize] overrides it.
+	options.FallbackPolicy = new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme)
+		.RequireAuthenticatedUser()
+		.Build();
+});
 
 //DbContext
 builder.Services.AddCheckersDbContext(builder.Configuration.GetConnectionString("CheckersDb")!);
@@ -17,8 +52,14 @@ builder.Services.AddAutoMapper(opt =>
 });
 
 //Services
+builder.Services.AddAuthorizationServices();
+builder.Services.AddCheckersAuth();
+
+//Options
+builder.Services.AddOptions(builder.Configuration);
 
 //Repositories
+builder.Services.AddRepositories();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
@@ -33,6 +74,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

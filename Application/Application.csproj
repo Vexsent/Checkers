@@ -10,11 +10,17 @@
 
     <ItemGroup>
       <PackageReference Include="AutoMapper" Version="16.2.0" />
+      <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.0.13" />
+      <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.23.0" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\Persistence\Persistence.csproj" />
         <ProjectReference Include="..\Shared\Shared.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <InternalsVisibleTo Include="UnitTests" />
     </ItemGroup>
 
 </Project>
