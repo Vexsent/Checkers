@@ -1,6 +1,7 @@
-﻿using Checkers.Persistence.Data.DataContext;
+﻿using Checkers.Application.Core._interface;
+using Checkers.Application.Core.Authorization;
+using Checkers.Persistence.Data.DataContext;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Checkers.Application.Core.Extensions
@@ -16,5 +17,10 @@ namespace Checkers.Application.Core.Extensions
 
 			return services;
 		}
-	}
+
+		public static IServiceCollection AddAuthorization(this IServiceCollection services)
+		{
+			services.AddScoped<IAuthService, AuthService>();
+			return services;
+		}
 }
