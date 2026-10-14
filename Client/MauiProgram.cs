@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 
-namespace Client
+namespace Checkers.Client
 {
 	public static class MauiProgram
 	{

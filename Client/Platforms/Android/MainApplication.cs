@@ -1,7 +1,7 @@
 ﻿using Android.App;
 using Android.Runtime;
 
-namespace Client
+namespace Checkers.Client
 {
 	[Application]
 	public class MainApplication : MauiApplication
