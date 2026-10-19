@@ -1,9 +1,11 @@
-using AutoMapper;
+﻿using AutoMapper;
 using Checkers.Application.Core.Services;
 using Checkers.Domain.Entities;
 using Checkers.Persistence.Data.IRepositories;
-using Checkers.Shared.Authentication.Policies;
+using Checkers.Shared.Authorization.Policies;
 using Checkers.Shared.DTOs;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace Checkers.Application.Core.Authorization
 {
@@ -11,9 +13,23 @@ namespace Checkers.Application.Core.Authorization
 		IUserRepository userRepository,
 		IPasswordHasher passwordHasher,
 		IJwtTokenService tokenService,
+		IAuthorizationService authorizationService,
 		IMapper mapper) : IAuthService
 	{
 		private readonly IMapper _mapper = mapper;
+
+		public ClaimsPrincipal User => UserIdentity();
+		public IEnumerable<string> Roles => UserRoles();
+
+		public Task<AuthorizationResult> AuthorizeAsync(AuthorizationPolicy policy)
+		{
+			return authorizationService.AuthorizeAsync(User, policy);
+		}
+
+		public Task<AuthorizationResult> AuthorizeAsync(string policyName)
+		{
+			return authorizationService.AuthorizeAsync(User, policyName);
+		}
 
 		public async Task<AuthResult> RegisterAsync(RegisterRequestDto request)
 		{
@@ -55,6 +71,16 @@ namespace Checkers.Application.Core.Authorization
 				ExpiresAtUtc = token.ExpiresAtUtc,
 				User = mapper.Map<UserDto>(user),
 			};
+		}
+
+		private ClaimsPrincipal UserIdentity()
+		{
+			return tokenService.GetCurrentUser();
+		}
+
+		private IEnumerable<string> UserRoles()
+		{
+			return tokenService.GetCurrentUserRoles();
 		}
 	}
 }

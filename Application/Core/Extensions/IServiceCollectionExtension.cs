@@ -43,6 +43,7 @@ namespace Checkers.Application.Core.Extensions
 		/// </summary>
 		public static IServiceCollection AddCheckersAuth(this IServiceCollection services)
 		{
+			services.AddHttpContextAccessor();
 			services.AddScoped<IPasswordHasher, PasswordHasher>();
 			services.AddScoped<IJwtTokenService, JwtTokenService>();
 

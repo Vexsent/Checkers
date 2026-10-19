@@ -1,4 +1,4 @@
-using Checkers.Shared.Authentication.Policies;
+using Checkers.Shared.Authorization.Policies;
 
 namespace UnitTests.Shared.Authentication.Policies
 {

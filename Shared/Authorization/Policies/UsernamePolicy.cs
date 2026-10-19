@@ -1,4 +1,4 @@
-namespace Checkers.Shared.Authentication.Policies
+namespace Checkers.Shared.Authorization.Policies
 {
 	/// <summary>
 	/// Validation rules for usernames. Shared so both the Server (enforcing on register)

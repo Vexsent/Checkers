@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using Checkers.Application.Core;
 using Checkers.Application.Core.Authorization;
 using Checkers.Application.Core.Profiles;
@@ -6,6 +6,7 @@ using Checkers.Application.Core.Services;
 using Checkers.Domain.Entities;
 using Checkers.Persistence.Data.IRepositories;
 using Checkers.Shared.DTOs;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
@@ -16,13 +17,14 @@ namespace UnitTests.Application.Core.Authorization
 		private readonly Mock<IUserRepository> _userRepository = new();
 		private readonly Mock<IPasswordHasher> _passwordHasher = new();
 		private readonly Mock<IJwtTokenService> _tokenService = new();
+		private readonly Mock<IAuthorizationService> _authorizationService = new();
 		private readonly IMapper _mapper;
 		private readonly AuthService _sut;
 
 		public AuthServiceTests()
 		{
 			_mapper = new MapperConfiguration(cfg => cfg.AddProfile<CheckerProfile>(), NullLoggerFactory.Instance).CreateMapper();
-			_sut = new AuthService(_userRepository.Object, _passwordHasher.Object, _tokenService.Object, _mapper);
+			_sut = new AuthService(_userRepository.Object, _passwordHasher.Object, _tokenService.Object, _authorizationService.Object, _mapper);
 
 			_tokenService
 				.Setup(t => t.GenerateToken(It.IsAny<User>()))

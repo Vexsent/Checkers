@@ -4,12 +4,14 @@ using System.Text;
 using Checkers.Application.Core.Options;
 using Checkers.Application.Core.Services;
 using Checkers.Domain.Entities;
+using Checkers.Shared.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Checkers.Application.Core.Security
 {
-	public class JwtTokenService(IOptions<AppOptions> options) : IJwtTokenService
+	public class JwtTokenService(IOptions<AppOptions> options, IHttpContextAccessor httpContextAccessor) : IJwtTokenService
 	{
 		private readonly JwtOptions _options = options.Value.Jwt;
 
@@ -22,6 +24,8 @@ namespace Checkers.Application.Core.Security
 				new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
 				new Claim(ClaimTypes.Name, user.Username),
 				new Claim(ClaimTypes.Email, user.Email),
+				// Users don't persist roles yet, so every account is a plain User for now.
+				new Claim(ClaimTypes.Role, Roles.User),
 			};
 
 			var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey));
@@ -35,6 +39,21 @@ namespace Checkers.Application.Core.Security
 				signingCredentials: credentials);
 
 			return new AuthToken(new JwtSecurityTokenHandler().WriteToken(token), expiresAtUtc);
+		}
+
+		public ClaimsPrincipal GetCurrentUser()
+		{
+			// The JwtBearer middleware has already validated the token and populated HttpContext.User.
+			return httpContextAccessor.HttpContext?.User ?? new ClaimsPrincipal(new ClaimsIdentity());
+		}
+
+		public IEnumerable<string> GetCurrentUserRoles()
+		{
+			var user = GetCurrentUser();
+			if (user.Identity?.IsAuthenticated != true)
+				return [];
+
+			return user.FindAll(ClaimTypes.Role).Select(c => c.Value).Distinct();
 		}
 	}
 }

@@ -8,6 +8,7 @@
     <BuildDependency Project="Persistence/Persistence.csproj" />
     <BuildDependency Project="Shared/Shared.csproj" />
   </Project>
+  <Project Path="BlazorHelpers/BlazorHelpers.csproj" Id="290d95ae-6940-459a-a122-1af2f293120a" />
   <Project Path="Client/Client.csproj" Id="ec35755c-b675-41d4-9bf4-b783f863f490">
     <BuildDependency Project="Shared/Shared.csproj" />
     <Deploy Solution="Debug|*" />
@@ -22,7 +23,6 @@
     <BuildDependency Project="Application/Application.csproj" />
     <BuildDependency Project="Shared/Shared.csproj" />
   </Project>
-  <Project Path="Shared/Shared.csproj" Id="7ee23682-6887-4493-9f6a-1ddd0a40d431">
-  </Project>
+  <Project Path="Shared/Shared.csproj" Id="7ee23682-6887-4493-9f6a-1ddd0a40d431" />
   <Project Path="UnitTests/UnitTests.csproj" Id="4e322395-844d-4906-bcaf-cb6fb1078545" />
 </Solution>

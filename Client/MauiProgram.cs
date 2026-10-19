@@ -1,9 +1,11 @@
-﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
+﻿using Checkers.Client.DelegateHandlers;
 using Checkers.Client.Extensions;
 using Checkers.Client.Options;
 using Checkers.Client.Services;
+using Checkers.Shared.Extensions;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Radzen;
 
 namespace Checkers.Client
@@ -21,6 +23,8 @@ namespace Checkers.Client
 				});
 
 			builder.Services.AddMauiBlazorWebView();
+			builder.Services.AddCascadingAuthenticationState();
+			builder.Services.AddSharedExtensions();
 
 #if DEBUG
 			builder.Services.AddBlazorWebViewDeveloperTools();
@@ -42,11 +46,14 @@ namespace Checkers.Client
 			builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("AppOptions"));
 
 			//HttpClient
+			builder.Services.AddTransient<AuthorizationRedirectHandler>();
+
+			builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient());
 			builder.Services.AddHttpClient(HttpClientNames.ServerApi, (sp, client) =>
 			{
 				var options = sp.GetRequiredService<IOptions<AppOptions>>().Value;
 				client.BaseAddress = new Uri(options.BaseUrl);
-			});
+			}).AddHttpMessageHandler<AuthorizationRedirectHandler>();
 
 			//Radzen
 			builder.Services.AddRadzenComponents();

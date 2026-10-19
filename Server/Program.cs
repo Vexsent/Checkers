@@ -1,9 +1,11 @@
 using System.Text;
 using Checkers.Application.Core.Extensions;
 using Checkers.Application.Core.Options;
+using Checkers.Shared.Extensions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
+using Checkers.Client.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +31,10 @@ builder.Services
 			IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
 		};
 	});
+builder.Services.AddAuthorizationServiceExtensions();
+
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddSharedExtensions();
 
 builder.Services.AddAuthorization(options =>
 {
@@ -45,6 +51,11 @@ builder.Services.AddCheckersDbContext(builder.Configuration.GetConnectionString(
 // Controllers
 builder.Services.AddControllers();
 
+// Blazor
+builder.Services.AddRazorPages();
+builder.Services.AddRazorComponents()
+	.AddInteractiveServerComponents();
+
 // AutoMapper
 builder.Services.AddAutoMapper(opt =>
 {
@@ -55,6 +66,9 @@ builder.Services.AddAutoMapper(opt =>
 builder.Services.AddAuthorizationServices();
 builder.Services.AddCheckersAuth();
 
+//Cors Service
+builder.Services.AddCors();
+
 //Options
 builder.Services.AddOptions(builder.Configuration);
 
@@ -63,6 +77,7 @@ builder.Services.AddRepositories();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
 
 var app = builder.Build();
 
@@ -73,10 +88,17 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseAntiforgery();
+
+app.UseCors();
+
+app.MapRazorPages();
 app.MapControllers();
+app.MapStaticAssets();
 
 app.Run();
