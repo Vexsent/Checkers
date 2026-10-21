@@ -8,7 +8,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\UnitTests\UnitTests.csproj" />
+      <PackageReference Include="Microsoft.AspNetCore.Authorization" Version="10.0.13" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.13" />
     </ItemGroup>
 
 </Project>

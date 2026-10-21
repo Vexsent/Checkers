@@ -49,6 +49,19 @@
         <DefaultLanguage>en-us</DefaultLanguage>
     </PropertyGroup>
 
+    <!-- App environment (Development / Staging / Production) and platform (Android / iOS / MacCatalyst / Windows).
+         Together they pick which appsettings files are packaged (see the Raw Assets section below).
+         Environment defaults: Debug -> Development, Release -> Production. Override with -p:AppEnvironment=Staging -->
+    <PropertyGroup>
+        <AppEnvironment Condition="'$(AppEnvironment)' == '' And '$(Configuration)' == 'Debug'">Development</AppEnvironment>
+        <AppEnvironment Condition="'$(AppEnvironment)' == ''">Production</AppEnvironment>
+
+        <AppPlatform Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">Android</AppPlatform>
+        <AppPlatform Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">iOS</AppPlatform>
+        <AppPlatform Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">MacCatalyst</AppPlatform>
+        <AppPlatform Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">Windows</AppPlatform>
+    </PropertyGroup>
+
     <ItemGroup>
         <!-- App Icon -->
         <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
@@ -64,14 +77,38 @@
         <MauiFont Include="Resources\Fonts\*" />
 
         <!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
-        <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+        <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" Exclude="Resources\Raw\appsettings.*.json" />
+
+        <!-- Platform settings: appsettings.{OS}.json, packaged in every environment -->
+        <MauiAsset Include="Resources\Raw\appsettings.$(AppPlatform).json" LogicalName="appsettings.$(AppPlatform).json" Condition="Exists('Resources\Raw\appsettings.$(AppPlatform).json')" />
+
+        <!-- The Razor SDK's default *.json Content glob would copy every settings file to the output too -->
+        <Content Remove="Resources\Raw\appsettings*.json" />
+
+        <!-- Stamps the environment and platform into the assembly; read at runtime by Options/AppEnvironment.cs -->
+        <AssemblyMetadata Include="AppEnvironment" Value="$(AppEnvironment)" />
+        <AssemblyMetadata Include="AppPlatform" Value="$(AppPlatform)" />
+    </ItemGroup>
+
+    <!-- Environment settings: appsettings.{env}.json and appsettings.{OS}.{env}.json. Production never packages
+         these; it runs on appsettings.json + appsettings.{OS}.json alone -->
+    <ItemGroup Condition="'$(AppEnvironment)' != 'Production'">
+        <MauiAsset Include="Resources\Raw\appsettings.$(AppEnvironment).json" LogicalName="appsettings.$(AppEnvironment).json" Condition="Exists('Resources\Raw\appsettings.$(AppEnvironment).json')" />
+        <MauiAsset Include="Resources\Raw\appsettings.$(AppPlatform).$(AppEnvironment).json" LogicalName="appsettings.$(AppPlatform).$(AppEnvironment).json" Condition="Exists('Resources\Raw\appsettings.$(AppPlatform).$(AppEnvironment).json')" />
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.13" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.13" />
+        <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.13" />
         <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
         <PackageReference Include="Radzen.Blazor" Version="11.3.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Shared\Shared.csproj" />
     </ItemGroup>
 
 </Project>

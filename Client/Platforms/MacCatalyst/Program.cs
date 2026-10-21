@@ -1,7 +1,7 @@
 ﻿using ObjCRuntime;
 using UIKit;
 
-namespace Client
+namespace Checkers.Client
 {
 	public class Program
 	{
