@@ -1,0 +1,18 @@
+@using Checkers.Shared.Enums
+
+<div class="board" style="@GridStyle">
+    @for (int r = 0; r < Board.Size; r++)
+    {
+        for (int c = 0; c < Board.Size; c++)
+        {
+            int row = r, col = c;
+            var image = PieceImages.For(Board[row, col]);
+            <div class="@SquareClass(row, col)" @onclick="() => SquareClicked(row, col)">
+                @if (image is not null)
+                {
+                    <img class="checker-piece-img" src="@image" alt="@Board[row, col]" />
+                }
+            </div>
+        }
+    }
+</div>

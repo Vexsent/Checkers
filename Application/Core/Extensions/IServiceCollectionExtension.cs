@@ -5,6 +5,7 @@ using Checkers.Application.Core.Security;
 using Checkers.Application.Core.Services;
 using Checkers.Persistence.Data.DataContext;
 using Checkers.Persistence.Data.IRepositories;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,14 +14,38 @@ namespace Checkers.Application.Core.Extensions
 {
 	public static class IServiceCollectionExtension
 	{
-		public static IServiceCollection AddCheckersDbContext(this IServiceCollection services, string connectionString)
+		/// <summary>
+		/// Registers <see cref="CheckersContext"/> against the primary connection string, falling back to
+		/// <paramref name="fallbackConnectionString"/> when the primary server can't be reached at startup.
+		/// </summary>
+		public static IServiceCollection AddCheckersDbContext(this IServiceCollection services, string connectionString, string? fallbackConnectionString = null)
 		{
+			var resolved = string.IsNullOrWhiteSpace(fallbackConnectionString) || CanConnect(connectionString)
+				? connectionString
+				: fallbackConnectionString;
+
 			services.AddDbContext<CheckersContext>(options =>
 			{
-				options.UseSqlServer(connectionString);
+				options.UseSqlServer(resolved);
 			});
 
 			return services;
+		}
+
+		private static bool CanConnect(string connectionString)
+		{
+			try
+			{
+				// Short timeout so an unreachable primary doesn't stall startup for the default 15s.
+				var builder = new SqlConnectionStringBuilder(connectionString) { ConnectTimeout = 5 };
+				using var connection = new SqlConnection(builder.ConnectionString);
+				connection.Open();
+				return true;
+			}
+			catch (Exception ex) when (ex is SqlException or InvalidOperationException or ArgumentException)
+			{
+				return false;
+			}
 		}
 
 		public static IServiceCollection AddAuthorizationServices(this IServiceCollection services)

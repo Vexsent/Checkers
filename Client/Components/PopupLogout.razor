@@ -1,0 +1,7 @@
+﻿@* Styled by .logout-popup in wwwroot/app.css: Radzen moves the open popup to <body>, out of reach of scoped CSS.
+   Not Lazy: ToggleAsync never calls StateHasChanged, so lazy content would stay unrendered when opened from outside. *@
+<RadzenPopup @ref="popup" class="logout-popup" Style="@($"width: {Width}px; height: {Height}px;")" CloseOnClickOutside="true" Close="@HandleClose">
+    <RadzenStack Gap="10px" Orientation="@Orientation.Vertical">
+        <RadzenButton Text="Logout" Click="@Logout" />
+    </RadzenStack>
+</RadzenPopup>

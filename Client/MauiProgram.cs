@@ -23,7 +23,6 @@ namespace Checkers.Client
 				});
 
 			builder.Services.AddMauiBlazorWebView();
-			builder.Services.AddCascadingAuthenticationState();
 			builder.Services.AddSharedExtensions();
 
 #if DEBUG
@@ -47,13 +46,16 @@ namespace Checkers.Client
 
 			//HttpClient
 			builder.Services.AddTransient<AuthorizationRedirectHandler>();
+			builder.Services.AddTransient<BearerTokenHandler>();
 
 			builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient());
 			builder.Services.AddHttpClient(HttpClientNames.ServerApi, (sp, client) =>
 			{
 				var options = sp.GetRequiredService<IOptions<AppOptions>>().Value;
 				client.BaseAddress = new Uri(options.BaseUrl);
-			}).AddHttpMessageHandler<AuthorizationRedirectHandler>();
+			})
+			.AddHttpMessageHandler<AuthorizationRedirectHandler>()
+			.AddHttpMessageHandler<BearerTokenHandler>();
 
 			//Radzen
 			builder.Services.AddRadzenComponents();

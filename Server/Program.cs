@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Checkers.Client.Extensions;
+using Checkers.Application.Core.Profiles;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,7 +47,10 @@ builder.Services.AddAuthorization(options =>
 });
 
 //DbContext
-builder.Services.AddCheckersDbContext(builder.Configuration.GetConnectionString("CheckersDb")!);
+// Connection strings live in user secrets (dotnet user-secrets --project Server), not appsettings.
+builder.Services.AddCheckersDbContext(builder.Configuration.GetConnectionString("CheckersDb"));
+		//?? throw new InvalidOperationException("Missing 'ConnectionStrings:CheckersDb'. Set it with: dotnet user-secrets set \"ConnectionStrings:CheckersDb\" \"<connection string>\" --project Server"),
+	//builder.Configuration.GetConnectionString("CheckersDbFallback"));
 
 // Controllers
 builder.Services.AddControllers();
@@ -60,6 +64,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddAutoMapper(opt =>
 {
 	opt.LicenseKey = builder.Configuration.GetSection("AutoMapper:LicenseKey").Value;
+	opt.AddProfile<CheckerProfile>();
 });
 
 //Services

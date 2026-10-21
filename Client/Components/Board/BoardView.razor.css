@@ -1,0 +1,31 @@
+/* Scales to the smaller of the viewport's width/height so the board fits phones and desktops. */
+.board {
+    display: grid;
+    width: min(90vw, 80vh);
+    aspect-ratio: 1 / 1;
+    margin: 0 auto;
+    border: 2px solid #333;
+}
+
+.square {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1 / 1;
+    cursor: pointer;
+}
+
+.dark-square {
+    background-color: #515151;
+}
+
+.light-square {
+    background-color: #eeeed2;
+}
+
+.checker-piece-img {
+    width: 80%;
+    height: 80%;
+    object-fit: contain;
+    image-rendering: pixelated;
+}

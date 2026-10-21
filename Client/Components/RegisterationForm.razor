@@ -3,8 +3,15 @@
         <RadzenFieldset Text="User Registration">
             <RadzenTextBox @bind-Value="@User.Username" Name="Username" Placeholder="Enter your username" Style="width: 100%;" />
             <RadzenTextBox @bind-Value="@User.Email" Name="Email" Placeholder="Enter your email" Style="width: 100%;" />
+            <RadzenTextBox @bind-Value="@User.FirstName" Name="FirstName" Placeholder="Enter your first name" Style="width: 100%;" />
+            <RadzenRequiredValidator Component="FirstName" Text="First name is required." />
+            <RadzenTextBox @bind-Value="@User.MiddleName" Name="MiddleName" Placeholder="Enter your middle name (optional)" Style="width: 100%;" />
+            <RadzenTextBox @bind-Value="@User.LastName" Name="LastName" Placeholder="Enter your last name" Style="width: 100%;" />
+            <RadzenRequiredValidator Component="LastName" Text="Last name is required." />
+            <RadzenTextBox @bind-Value="@User.NickName" Name="NickName" Placeholder="Enter a nickname (optional)" Style="width: 100%;" />
             <RadzenPassword @bind-Value="@User.Password" Name="Password" Placeholder="Enter your password" Style="width: 100%;" />
             <RadzenButton Text="Register" ButtonType="ButtonType.Submit" Style="margin-top: 10px;" />
+            <RadzenButton Text="Cancel" ButtonType="ButtonType.Button" ButtonStyle="ButtonStyle.Light" Style="margin-top: 10px;" Click="@(() => DialogService.Close())" />
         </RadzenFieldset>
     </RadzenTemplateForm>
 </RadzenStack>
