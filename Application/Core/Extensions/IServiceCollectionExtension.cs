@@ -1,4 +1,5 @@
 ﻿using Checkers.Application.Core.Authorization;
+using Checkers.Application.Core.MatchHistory;
 using Checkers.Application.Core.Options;
 using Checkers.Application.Core.Repositories;
 using Checkers.Application.Core.Security;
@@ -57,6 +58,16 @@ namespace Checkers.Application.Core.Extensions
 		public static IServiceCollection AddRepositories(this IServiceCollection services)
 		{
 			services.AddScoped<IUserRepository, UserRepository>();
+			services.AddScoped<IMatchRecordRepository, MatchRecordRepository>();
+			return services;
+		}
+
+		/// <summary>
+		/// Registers the match history service. It depends on the repositories, so call AddRepositories too.
+		/// </summary>
+		public static IServiceCollection AddMatchHistoryServices(this IServiceCollection services)
+		{
+			services.AddScoped<IMatchHistoryService, MatchHistoryService>();
 			return services;
 		}
 

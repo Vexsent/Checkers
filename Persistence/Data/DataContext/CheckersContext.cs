@@ -8,6 +8,7 @@ namespace Checkers.Persistence.Data.DataContext
 	{
 
 		public DbSet<User> Users => Set<User>();
+		public DbSet<MatchRecord> MatchRecords => Set<MatchRecord>();
 
 		protected override void OnConfiguring(DbContextOptionsBuilder options)
 		{
