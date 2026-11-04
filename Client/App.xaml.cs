@@ -1,4 +1,4 @@
-﻿namespace Client
+﻿namespace Checkers.Client
 {
 	public partial class App : Application
 	{

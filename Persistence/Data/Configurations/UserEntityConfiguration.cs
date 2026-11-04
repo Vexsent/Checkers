@@ -20,8 +20,9 @@ namespace Checkers.Persistence.Data.Configurations
 				.HasMaxLength(50)
 				.HasColumnName("User");
 
-			builder.Property(p => p.Password)
-				.IsRequired();
+			builder.Property(p => p.PasswordHash)
+				.IsRequired()
+				.HasColumnName("Password");
 
 			builder.Property(p => p.Email)
 				.IsRequired()

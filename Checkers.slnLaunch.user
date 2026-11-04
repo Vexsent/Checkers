@@ -1,10 +1,25 @@
 [
   {
-    "Name": "New Profile",
+    "Name": "Windows",
     "Projects": [
       {
         "Path": "Client\\Client.csproj",
+        "Action": "Start",
+        "DebugTarget": "Windows Machine"
+      },
+      {
+        "Path": "Server\\Server.csproj",
         "Action": "Start"
+      }
+    ]
+  },
+  {
+    "Name": "Android",
+    "Projects": [
+      {
+        "Path": "Client\\Client.csproj",
+        "Action": "Start",
+        "DebugTarget": "Pixel 7 - API 36 (Android 16.0 - API 36)"
       },
       {
         "Path": "Server\\Server.csproj",

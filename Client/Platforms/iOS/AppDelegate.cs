@@ -1,6 +1,6 @@
 ﻿using Foundation;
 
-namespace Client
+namespace Checkers.Client
 {
 	[Register("AppDelegate")]
 	public class AppDelegate : MauiUIApplicationDelegate

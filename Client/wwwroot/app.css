@@ -84,6 +84,45 @@ h1:focus {
     display: none;
 }
 
+/* Strip padding from RadzenPanel elements when used inside a checkers layout */
+.checkers-board-square .rz-panel-content {
+    padding: 0 !important;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.checkers-board-square.dark-square {
+    background-color: #515151 !important; 
+}
+
+.checkers-board-square.light-square {
+    background-color: #eeeed2 !important;
+}
+
+/* Logout popup (PopupLogout.razor). Must be global: Radzen moves an open popup's div to <body>,
+   outside the component, so scoped .razor.css rules can no longer reach it. */
+.logout-popup {
+    display: none;
+    position: absolute;
+    z-index: 1000;
+    overflow: hidden;
+    padding: 0.5rem;
+    border: var(--rz-panel-border);
+    background-color: var(--rz-panel-background-color);
+    box-shadow: var(--rz-panel-shadow);
+    border-radius: var(--rz-border-radius);
+}
+
+.checker-piece-img {
+    width: 80%;
+    height: 80%;
+    object-fit: contain;
+}
+/***/
+
 @supports (-webkit-touch-callout: none) {
     .status-bar-safe-area {
         display: flex;

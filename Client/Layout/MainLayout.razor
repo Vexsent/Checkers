@@ -1,0 +1,56 @@
+@using System.Security.Claims;
+@using Radzen;
+@inherits LayoutComponentBase
+
+<RadzenLayout Context="context">
+    <AuthorizeView>
+        <Authorizing>
+            <RadzenProgressBarCircular ProgressBarStyle="ProgressBarStyle.Primary" Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" AriaLabel="loading" />
+        </Authorizing>
+    <Authorized>
+        <RadzenHeader>
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="padding: 0 1rem; display: flex;">
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Start" Gap="0.5rem">
+                    <RadzenSidebarToggle Click="@(() => sidebarExpanded = !sidebarExpanded)" />
+                    <div style="margin-top: auto; margin-bottom:auto;">Checkers</div>
+                </RadzenStack>
+                <RadzenStack Orientation="Orientation.Horizontal"  AlignItems="AlignItems.End" Gap="0.5rem">
+                    <span>Welcome @(context.User.Identity?.Account ?? context.User.Identity?.Name)</span>
+                    <RadzenButton @ref="menuButton" Icon="settings" title="Account" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Size="ButtonSize.Small" Click="@ToggleLogout" />
+                    <PopupLogout @ref="popup" Width="150" Height="60" />
+                </RadzenStack>
+            </RadzenStack>
+        </RadzenHeader>
+        <RadzenSidebar @bind-Expanded="@sidebarExpanded" Style="width: 250px;">
+            <Sidebar />
+        </RadzenSidebar>
+        <RadzenBody>
+            @Body
+        </RadzenBody>
+    </Authorized>
+    <NotAuthorized>
+        <RadzenHeader>
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="padding: 0 1rem; display: flex;">
+                <RadzenStack Orientation="Orientation.Horizontal">
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Start" Gap="0.5rem">
+                        <div style="margin-top: auto; margin-bottom:auto;">Checkers</div>
+                    </RadzenStack>
+                    <RadzenStack Orientation="Orientation.Horizontal"  AlignItems="AlignItems.End" Gap="0.5rem">
+                        <RadzenButton Icon="menu" Text="Sign Up" Size="ButtonSize.Small" Click="@(() => OpenRegisterDialog())" />
+                        <RadzenButton Icon="menu" Text="Login" Size="ButtonSize.Small" Click="@(() => OpenLoginDialog())" />
+                    </RadzenStack>
+                </RadzenStack>
+            </RadzenStack>
+        </RadzenHeader>
+    </NotAuthorized>
+</AuthorizeView>
+    <RadzenFooter Style="height: 60px;">
+        <div class="d-flex align-items-center justify-content-between h-100 px-4">
+            <span>&copy; 2026 - Software Engineering Project Checkers</span>
+        </div>
+    </RadzenFooter>
+</RadzenLayout>
+
+@* Host for DialogService, NotificationService, TooltipService and ContextMenuService output *@
+<RadzenComponents />
+
