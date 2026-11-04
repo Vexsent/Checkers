@@ -31,5 +31,34 @@ namespace Checkers.Shared.GameModels
 
 			return board;
 		}
+
+		/// <summary>
+		/// Flattens the board row by row so it can be sent over the wire.
+		/// </summary>
+		public GamePieces[] ToSquares()
+		{
+			var squares = new GamePieces[Size * Size];
+			for (int r = 0; r < Size; r++)
+				for (int c = 0; c < Size; c++)
+					squares[r * Size + c] = _squares[r, c];
+
+			return squares;
+		}
+
+		/// <summary>
+		/// Rebuilds a board from the row-by-row layout produced by <see cref="ToSquares"/>.
+		/// </summary>
+		public static Board FromSquares(int size, IReadOnlyList<GamePieces> squares)
+		{
+			if (squares.Count != size * size)
+				throw new ArgumentException($"Expected {size * size} squares but got {squares.Count}.", nameof(squares));
+
+			var board = new Board(size);
+			for (int r = 0; r < size; r++)
+				for (int c = 0; c < size; c++)
+					board._squares[r, c] = squares[r * size + c];
+
+			return board;
+		}
 	}
 }
