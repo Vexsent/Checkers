@@ -12,8 +12,21 @@ namespace Checkers.Shared.GameModels
 
 		public Board(int size = 8) { Size = size; _squares = new GamePieces[size, size]; }
 
-		public GamePieces this[int row, int col] => _squares[row, col];
+		public GamePieces this[int row, int col]
+		{
+			get => _squares[row, col];
+			set => _squares[row, col] = value;
+		}
+
+		public GamePieces this[Square square]
+		{
+			get => this[square.Row, square.Col];
+			set => this[square.Row, square.Col] = value;
+		}
+
 		public static bool IsPlayable(int row, int col) => (row + col) % 2 == 1;
+		public bool IsOnBoard(Square square) =>
+			square.Row >= 0 && square.Row < Size && square.Col >= 0 && square.Col < Size;
 
 		public static Board CreateStandard(int size = 8)
 		{
