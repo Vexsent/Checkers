@@ -1,4 +1,4 @@
-using Checkers.Application.Core.Sessions;
+using Checkers.Shared.DTOs;
 using Checkers.Shared.GameModels;
 
 namespace Checkers.Application.Core.Services

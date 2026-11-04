@@ -15,10 +15,16 @@ namespace Checkers.Client.Components.Board
 		[Parameter]
 		public EventCallback<(int Row, int Col)> OnSquareClicked { get; set; }
 
+		[Parameter]
+		public (int Row, int Col)? SelectedSquare { get; set; }
+
 		private string GridStyle => $"grid-template-columns: repeat({Board.Size}, 1fr);";
 
-		private static string SquareClass(int row, int col) =>
-			Checkers.Shared.GameModels.Board.IsPlayable(row, col) ? "square dark-square" : "square light-square";
+		private string SquareClass(int row, int col)
+		{
+			var color = Checkers.Shared.GameModels.Board.IsPlayable(row, col) ? "square dark-square" : "square light-square";
+			return SelectedSquare == (row, col) ? $"{color} selected-square" : color;
+		}
 
 		private Task SquareClicked(int row, int col) => OnSquareClicked.InvokeAsync((row, col));
 	}

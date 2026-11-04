@@ -1,6 +1,4 @@
-using Checkers.Shared.DTOs;
-
-namespace Checkers.Application.Core.Sessions
+namespace Checkers.Shared.DTOs
 {
 	public sealed record SessionResult(GameSessionDto? Session, string? Error)
 	{

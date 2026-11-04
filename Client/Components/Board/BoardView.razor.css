@@ -23,6 +23,11 @@
     background-color: #eeeed2;
 }
 
+.selected-square {
+    outline: 3px solid #f0c040;
+    outline-offset: -3px;
+}
+
 .checker-piece-img {
     width: 80%;
     height: 80%;

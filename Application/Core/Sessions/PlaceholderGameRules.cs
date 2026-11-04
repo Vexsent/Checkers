@@ -20,7 +20,7 @@ namespace Checkers.Application.Core.Sessions
 				return MoveResult.Illegal(board, mover, "That square is not on the board.");
 
 			var piece = board[move.FromRow, move.FromCol];
-			if (!BelongsTo(piece, mover))
+			if (!Board.BelongsTo(piece, mover))
 				return MoveResult.Illegal(board, mover, "You can only move your own pieces.");
 
 			if (!Board.IsPlayable(move.ToRow, move.ToCol) || board[move.ToRow, move.ToCol] != GamePieces.Empty)
@@ -36,9 +36,5 @@ namespace Checkers.Application.Core.Sessions
 
 		private static bool IsOnBoard(Board board, int row, int col) =>
 			row >= 0 && row < board.Size && col >= 0 && col < board.Size;
-
-		private static bool BelongsTo(GamePieces piece, PlayerColor color) => color == PlayerColor.Black
-			? piece is GamePieces.BlackPawn or GamePieces.BlackKing
-			: piece is GamePieces.WhitePawn or GamePieces.WhiteKing;
 	}
 }

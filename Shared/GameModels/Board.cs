@@ -14,6 +14,9 @@ namespace Checkers.Shared.GameModels
 
 		public GamePieces this[int row, int col] => _squares[row, col];
 		public static bool IsPlayable(int row, int col) => (row + col) % 2 == 1;
+		public static bool BelongsTo(GamePieces piece, PlayerColor color) => color == PlayerColor.Black
+			? piece is GamePieces.BlackPawn or GamePieces.BlackKing
+			: piece is GamePieces.WhitePawn or GamePieces.WhiteKing;
 
 		public static Board CreateStandard(int size = 8)
 		{
