@@ -56,7 +56,7 @@
             <RadzenAlert AlertStyle="AlertStyle.Warning" AllowClose="false" Shade="Shade.Lighter">Your opponent has disconnected.</RadzenAlert>
         }
 
-        <BoardView Board="@CurrentBoard" SelectedSquare="@selected" OnSquareClicked="@SquareClicked" />
+        <BoardView Board="@CurrentBoard" Selected="@selected" OnSquareClicked="@SquareClicked" />
     }
 
     @if (error is not null)

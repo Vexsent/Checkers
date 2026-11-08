@@ -5,6 +5,8 @@ using Checkers.Shared.Enums;
 using Checkers.Shared.GameModels;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+// Client.Services also gets a Square type from the relay branch, so pin this one.
+using Square = Checkers.Shared.GameModels.Square;
 
 namespace Checkers.Client.Pages
 {
@@ -20,7 +22,7 @@ namespace Checkers.Client.Pages
 		private bool busy;
 		private string joinCode = string.Empty;
 		private string? error;
-		private (int Row, int Col)? selected;
+		private Square? selected;
 
 		private GameSessionDto? Session => Sessions.Session;
 		private Board CurrentBoard => Board.FromSquares(Session!.BoardSize, Session.Squares);
@@ -84,9 +86,10 @@ namespace Checkers.Client.Pages
 			if (busy || !IsMyTurn)
 				return;
 
-			if (Board.BelongsTo(CurrentBoard[square.Row, square.Col], MyColor))
+			var clicked = new Square(square.Row, square.Col);
+			if (Board.BelongsTo(CurrentBoard[clicked], MyColor))
 			{
-				selected = selected == square ? null : square;
+				selected = selected == clicked ? null : clicked;
 				return;
 			}
 
@@ -94,7 +97,7 @@ namespace Checkers.Client.Pages
 				return;
 
 			selected = null;
-			await RunAsync(() => Sessions.MakeMoveAsync(new GameMove(from.Row, from.Col, square.Row, square.Col)));
+			await RunAsync(() => Sessions.MakeMoveAsync(new GameMove(from.Row, from.Col, clicked.Row, clicked.Col)));
 		}
 
 		public void Dispose() => Sessions.Changed -= OnSessionChanged;

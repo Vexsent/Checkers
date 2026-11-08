@@ -78,7 +78,7 @@ namespace UnitTests.Application.Core.Sessions
 
 			Assert.Equal(Black, session.BlackPlayerId);
 			Assert.Equal(White, session.WhitePlayerId);
-			Assert.Equal(1, session.MoveCount);
+			Assert.Equal([BlackOpening], session.Moves);
 		}
 
 		[Fact]
@@ -97,7 +97,7 @@ namespace UnitTests.Application.Core.Sessions
 			var result = _manager.MakeMove(code, White, WhiteOpening);
 
 			Assert.False(result.Succeeded);
-			Assert.Equal(0, _manager.Join(code, White, "white").Session!.MoveCount);
+			Assert.Empty(_manager.Join(code, White, "white").Session!.Moves);
 		}
 
 		[Fact]
@@ -119,7 +119,7 @@ namespace UnitTests.Application.Core.Sessions
 			Assert.Equal(GamePieces.Empty, board[2, 1]);
 			Assert.Equal(GamePieces.BlackPawn, board[3, 0]);
 			Assert.Equal(PlayerColor.White, session.CurrentPlayer);
-			Assert.Equal(1, session.MoveCount);
+			Assert.Equal([BlackOpening], session.Moves);
 		}
 
 		[Fact]
@@ -144,7 +144,7 @@ namespace UnitTests.Application.Core.Sessions
 			var session = manager.MakeMove(code, Black, BlackOpening).Session!;
 
 			Assert.Equal(PlayerColor.Black, session.CurrentPlayer);
-			Assert.Equal(2, session.MoveCount);
+			Assert.Equal(2, session.Moves.Length);
 		}
 
 		[Fact]
@@ -191,12 +191,26 @@ namespace UnitTests.Application.Core.Sessions
 			Assert.Empty(_manager.GetActiveMatchCodes(Outsider));
 		}
 
+		/// <summary>
+		/// Accepts every move, then hands the turn to <paramref name="nextPlayer"/> with <paramref name="outcome"/>.
+		/// </summary>
 		private sealed class ScriptedRules(PlayerColor nextPlayer, GameOutcome outcome) : IGameRules
 		{
-			public PlayerColor FirstPlayer => PlayerColor.Black;
-			public Board CreateInitialBoard() => Board.CreateStandard();
-			public MoveResult ApplyMove(Board board, PlayerColor mover, GameMove move) =>
-				new(true, board, nextPlayer, outcome);
+			public IRulesGame NewGame() => new ScriptedGame(nextPlayer, outcome);
+
+			private sealed class ScriptedGame(PlayerColor nextPlayer, GameOutcome outcome) : IRulesGame
+			{
+				public Board Board { get; } = Board.CreateStandard();
+				public PlayerColor CurrentTurn { get; private set; } = PlayerColor.Black;
+				public GameOutcome Outcome { get; private set; } = GameOutcome.InProgress;
+
+				public string? TryMove(GameMove move)
+				{
+					CurrentTurn = nextPlayer;
+					Outcome = outcome;
+					return null;
+				}
+			}
 		}
 	}
 }

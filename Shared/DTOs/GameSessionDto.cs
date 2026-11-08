@@ -21,6 +21,14 @@ namespace Checkers.Shared.DTOs
 		/// Row by row. Use <see cref="Board.FromSquares"/> to get a Board back.
 		/// </summary>
 		public GamePieces[] Squares { get; set; } = [];
-		public int MoveCount { get; set; }
+		/// <summary>
+		/// Every step played so far, oldest first. A multi-jump is one entry per jump.
+		/// </summary>
+		public GameMove[] Moves { get; set; } = [];
+		/// <summary>
+		/// When the second player joined. Null while waiting for an opponent.
+		/// </summary>
+		public DateTime? StartedAtUtc { get; set; }
+		public DateTime? EndedAtUtc { get; set; }
 	}
 }

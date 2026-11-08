@@ -23,14 +23,18 @@
     background-color: #eeeed2;
 }
 
-.selected-square {
-    outline: 3px solid #f0c040;
-    outline-offset: -3px;
-}
-
 .checker-piece-img {
     width: 80%;
     height: 80%;
     object-fit: contain;
     image-rendering: pixelated;
+}
+
+.selected-square {
+    box-shadow: inset 0 0 0 4px #f5c518;
+}
+
+/* Empty squares the selected piece can move to. */
+.legal-move {
+    background-image: radial-gradient(circle, rgba(245, 197, 24, 0.85) 18%, transparent 20%);
 }

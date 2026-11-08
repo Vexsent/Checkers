@@ -21,7 +21,7 @@ namespace Checkers.Application.Core.Sessions
 
 		public SessionResult Create(int userId, string username)
 		{
-			var match = new LiveMatch(userId, username, rules.CreateInitialBoard(), rules.FirstPlayer);
+			var match = new LiveMatch(userId, username, rules.NewGame());
 
 			string code;
 			do
@@ -50,6 +50,7 @@ namespace Checkers.Application.Core.Sessions
 				match.WhitePlayerId = userId;
 				match.WhitePlayerName = username;
 				match.Status = SessionStatus.InProgress;
+				match.StartedAtUtc = DateTime.UtcNow;
 				return SessionResult.Success(match.ToDto());
 			}
 		}
@@ -70,16 +71,13 @@ namespace Checkers.Application.Core.Sessions
 				if (match.ColorOf(userId) != match.CurrentPlayer)
 					return SessionResult.Failure("It is not your turn.");
 
-				var result = rules.ApplyMove(match.Board, match.CurrentPlayer, move);
-				if (!result.IsLegal)
-					return SessionResult.Failure(result.Error ?? "That move is not allowed.");
+				if (match.Game.TryMove(move) is { } error)
+					return SessionResult.Failure(error);
 
-				match.Board = result.Board;
-				match.CurrentPlayer = result.NextPlayer;
 				match.Moves.Add(move);
 
-				if (result.Outcome != GameOutcome.InProgress)
-					match.Finish(result.Outcome);
+				if (match.Game.Outcome != GameOutcome.InProgress)
+					match.Finish(match.Game.Outcome);
 
 				return SessionResult.Success(match.ToDto());
 			}
@@ -118,7 +116,7 @@ namespace Checkers.Application.Core.Sessions
 			return codes;
 		}
 
-		private sealed class LiveMatch(int blackPlayerId, string blackPlayerName, Board board, PlayerColor firstPlayer)
+		private sealed class LiveMatch(int blackPlayerId, string blackPlayerName, IRulesGame game)
 		{
 			public string Code { get; set; } = string.Empty;
 			public SessionStatus Status { get; set; } = SessionStatus.WaitingForOpponent;
@@ -127,9 +125,11 @@ namespace Checkers.Application.Core.Sessions
 			public string BlackPlayerName { get; } = blackPlayerName;
 			public int? WhitePlayerId { get; set; }
 			public string? WhitePlayerName { get; set; }
-			public Board Board { get; set; } = board;
-			public PlayerColor CurrentPlayer { get; set; } = firstPlayer;
+			public IRulesGame Game { get; } = game;
+			public PlayerColor CurrentPlayer => Game.CurrentTurn;
 			public List<GameMove> Moves { get; } = [];
+			public DateTime? StartedAtUtc { get; set; }
+			public DateTime? EndedAtUtc { get; private set; }
 
 			public bool HasPlayer(int userId) => userId == BlackPlayerId || userId == WhitePlayerId;
 			public PlayerColor ColorOf(int userId) => userId == BlackPlayerId ? PlayerColor.Black : PlayerColor.White;
@@ -138,6 +138,7 @@ namespace Checkers.Application.Core.Sessions
 			{
 				Outcome = outcome;
 				Status = SessionStatus.Finished;
+				EndedAtUtc = DateTime.UtcNow;
 			}
 
 			public GameSessionDto ToDto() => new()
@@ -150,9 +151,11 @@ namespace Checkers.Application.Core.Sessions
 				WhitePlayerId = WhitePlayerId,
 				WhitePlayerName = WhitePlayerName,
 				CurrentPlayer = CurrentPlayer,
-				BoardSize = Board.Size,
-				Squares = Board.ToSquares(),
-				MoveCount = Moves.Count
+				BoardSize = Game.Board.Size,
+				Squares = Game.Board.ToSquares(),
+				Moves = [.. Moves],
+				StartedAtUtc = StartedAtUtc,
+				EndedAtUtc = EndedAtUtc
 			};
 		}
 	}
