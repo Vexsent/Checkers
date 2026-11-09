@@ -30,6 +30,10 @@
                 <div class="match-code">Match code: <strong>@Session.MatchCode</strong></div>
                 <div>Black: @Session.BlackPlayerName@(MyColor == PlayerColor.Black ? " (you)" : "") · White: @(Session.WhitePlayerName ?? "waiting…")@(MyColor == PlayerColor.White && Session.WhitePlayerId is not null ? " (you)" : "")</div>
                 <div class="match-status">@StatusText</div>
+                @if (Session.Status == SessionStatus.Finished)
+                {
+                    <RadzenLink Path="match-history" Text="See this game in your match history" />
+                }
             </div>
             <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
                 @if (Session.Status == SessionStatus.InProgress)

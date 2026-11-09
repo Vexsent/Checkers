@@ -5,6 +5,7 @@ using Checkers.Shared.Enums;
 using Checkers.Shared.GameModels;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using Radzen;
 // Client.Services also gets a Square type from the relay branch, so pin this one.
 using Square = Checkers.Shared.GameModels.Square;
 
@@ -17,6 +18,9 @@ namespace Checkers.Client.Pages
 
 		[Inject]
 		private IRelayService MoveList { get; set; } = default!;
+
+		[Inject]
+		private DialogService DialogService { get; set; } = default!;
 
 		[CascadingParameter]
 		private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
@@ -59,7 +63,14 @@ namespace Checkers.Client.Pages
 			MoveList.MovesChanged += OnSessionChanged;
 		}
 
-		private void OnSessionChanged() => _ = InvokeAsync(StateHasChanged);
+		private void OnSessionChanged() => _ = InvokeAsync(() =>
+		{
+			// The out-of-turn warning is stale once it's this player's turn.
+			if (error == Game.NotYourTurnError && IsMyTurn)
+				error = null;
+
+			StateHasChanged();
+		});
 
 		private async Task RunAsync(Func<Task<string?>> action)
 		{
@@ -81,7 +92,14 @@ namespace Checkers.Client.Pages
 
 		private Task Rejoin() => RunAsync(() => Sessions.JoinMatchAsync(Session!.MatchCode));
 
-		private Task Resign() => RunAsync(Sessions.ResignAsync);
+		private async Task Resign()
+		{
+			var confirmed = await DialogService.Confirm("Are you sure you want to resign? Your opponent will win.", "Resign",
+				new ConfirmOptions { OkButtonText = "Resign", CancelButtonText = "Cancel" });
+
+			if (confirmed == true)
+				await RunAsync(Sessions.ResignAsync);
+		}
 
 		private Task Leave()
 		{
@@ -96,8 +114,16 @@ namespace Checkers.Client.Pages
 
 		private async Task SquareClicked((int Row, int Col) square)
 		{
-			if (busy || !IsMyTurn)
+			if (busy || Session is not { Status: SessionStatus.InProgress })
 				return;
+
+			if (!IsMyTurn)
+			{
+				error = Game.NotYourTurnError;
+				return;
+			}
+
+			error = null;
 
 			var clicked = new Square(square.Row, square.Col);
 			var midJump = Sessions.Replay?.Game.JumpingPiece is not null;
