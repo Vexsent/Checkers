@@ -94,7 +94,7 @@ namespace Checkers.Application.Core.Extensions
 		/// </summary>
 		public static IServiceCollection AddGameSessions(this IServiceCollection services)
 		{
-			services.AddSingleton<IGameRules, PlaceholderGameRules>();
+			services.AddSingleton<IGameRules, CheckersGameRules>();
 			services.AddSingleton<IGameSessionManager, GameSessionManager>();
 			return services;
 		}

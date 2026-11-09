@@ -14,7 +14,7 @@ namespace UnitTests.Application.Core.Sessions
 		private static readonly GameMove BlackOpening = new(2, 1, 3, 0);
 		private static readonly GameMove WhiteOpening = new(5, 0, 4, 1);
 
-		private readonly GameSessionManager _manager = new(new PlaceholderGameRules());
+		private readonly GameSessionManager _manager = new(new CheckersGameRules());
 
 		private string StartMatch()
 		{
@@ -130,7 +130,7 @@ namespace UnitTests.Application.Core.Sessions
 			var result = _manager.MakeMove(code, Black, WhiteOpening);
 
 			Assert.False(result.Succeeded);
-			Assert.Equal("You can only move your own pieces.", result.Error);
+			Assert.Equal(Game.NotYourTurnError, result.Error);
 		}
 
 		[Fact]
