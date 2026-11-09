@@ -116,6 +116,21 @@ namespace Checkers.Application.Core.Sessions
 			return codes;
 		}
 
+		public bool TryClaimRecording(string matchCode)
+		{
+			if (!_matches.TryGetValue(matchCode, out var match))
+				return false;
+
+			lock (match)
+			{
+				if (match.Status != SessionStatus.Finished || match.RecordingClaimed)
+					return false;
+
+				match.RecordingClaimed = true;
+				return true;
+			}
+		}
+
 		private sealed class LiveMatch(int blackPlayerId, string blackPlayerName, IRulesGame game)
 		{
 			public string Code { get; set; } = string.Empty;
@@ -130,6 +145,7 @@ namespace Checkers.Application.Core.Sessions
 			public List<GameMove> Moves { get; } = [];
 			public DateTime? StartedAtUtc { get; set; }
 			public DateTime? EndedAtUtc { get; private set; }
+			public bool RecordingClaimed { get; set; }
 
 			public bool HasPlayer(int userId) => userId == BlackPlayerId || userId == WhitePlayerId;
 			public PlayerColor ColorOf(int userId) => userId == BlackPlayerId ? PlayerColor.Black : PlayerColor.White;

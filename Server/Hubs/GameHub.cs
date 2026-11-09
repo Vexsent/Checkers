@@ -14,7 +14,10 @@ namespace Checkers.Server.Hubs
 	/// SessionResult because SignalR prefixes HubException messages with its own text.
 	/// </summary>
 	[Authorize]
-	public class GameHub(IGameSessionManager sessions) : Hub<IGameHubClient>
+	public class GameHub(
+		IGameSessionManager sessions,
+		IFinishedMatchRecorder recorder,
+		ILogger<GameHub> logger) : Hub<IGameHubClient>
 	{
 		private int UserId => int.Parse(Context.User!.FindFirstValue(ClaimTypes.NameIdentifier)!);
 		private string Username => Context.User!.FindFirstValue(ClaimTypes.Name)!;
@@ -58,9 +61,29 @@ namespace Checkers.Server.Hubs
 		private async Task<SessionResult> BroadcastAsync(SessionResult result)
 		{
 			if (result.Session is { } session)
+			{
+				// Save before telling the players, so the game is already in their match history
+				// when they see that it ended.
+				await RecordIfFinishedAsync(session);
 				await Clients.Group(session.MatchCode).SessionUpdated(session);
+			}
 
 			return result;
+		}
+
+		private async Task RecordIfFinishedAsync(GameSessionDto session)
+		{
+			// The game itself is over either way, so a failed save is logged rather than sent to the players.
+			try
+			{
+				var saved = await recorder.RecordIfFinishedAsync(session);
+				if (saved is { Success: false })
+					logger.LogError("Could not save match {MatchCode}: {Errors}", session.MatchCode, string.Join(" ", saved.Errors));
+			}
+			catch (Exception ex)
+			{
+				logger.LogError(ex, "Could not save match {MatchCode}.", session.MatchCode);
+			}
 		}
 	}
 }
