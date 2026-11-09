@@ -1,0 +1,52 @@
+@page "/match-history"
+@attribute [Authorize]
+
+<PageTitle>Match History</PageTitle>
+
+<RadzenStack Gap="1rem" Style="padding: 1rem;">
+    <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H1">Match History</RadzenText>
+
+    @if (loading)
+    {
+        <RadzenProgressBarCircular ProgressBarStyle="ProgressBarStyle.Primary" Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" AriaLabel="loading" />
+    }
+    else if (history is null)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Danger" AllowClose="false">
+            Your match history couldn't be loaded. Please try again later.
+        </RadzenAlert>
+    }
+    else
+    {
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem">
+            <RadzenText TextStyle="TextStyle.H6">Wins: @history.Wins</RadzenText>
+            <RadzenText TextStyle="TextStyle.H6">Losses: @history.Losses</RadzenText>
+            <RadzenText TextStyle="TextStyle.H6">Draws: @history.Draws</RadzenText>
+        </RadzenStack>
+
+        @if (history.Matches.Count == 0)
+        {
+            <RadzenText TextStyle="TextStyle.Body1">You haven't played any matches yet.</RadzenText>
+        }
+        else
+        {
+            <RadzenDataGrid Data="@history.Matches" TItem="MatchSummaryDto" AllowSorting="true" AllowPaging="true" PageSize="10">
+                <Columns>
+                    <RadzenDataGridColumn TItem="MatchSummaryDto" Property="@nameof(MatchSummaryDto.EndedAtUtc)" Title="Date">
+                        <Template Context="match">@match.EndedAtUtc.ToLocalTime().ToString("g")</Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="MatchSummaryDto" Property="@nameof(MatchSummaryDto.OpponentName)" Title="Opponent" />
+                    <RadzenDataGridColumn TItem="MatchSummaryDto" Property="@nameof(MatchSummaryDto.PlayedAs)" Title="Played As" />
+                    <RadzenDataGridColumn TItem="MatchSummaryDto" Property="@nameof(MatchSummaryDto.Outcome)" Title="Result">
+                        <Template Context="match">
+                            <RadzenBadge BadgeStyle="@OutcomeStyle(match.Outcome)" Text="@match.Outcome.ToString()" />
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="MatchSummaryDto" Title="Length" Sortable="false">
+                        <Template Context="match">@Duration(match)</Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+        }
+    }
+</RadzenStack>
