@@ -24,16 +24,6 @@
         <PackageReference Include="Moq" Version="4.20.72" />
     </ItemGroup>
 
-    <!--
-        The Client project is a MAUI app (built separately for Windows, Android, etc.), so this
-        net10.0 test project can't reference it directly. Instead, compile the relay's two files
-        into the tests as links: the files stay in Client; the tests just build them too.
-    -->
-    <ItemGroup>
-        <Compile Include="..\Client\Services\_interfaces\IRelayService.cs" Link="Client\Services\IRelayService.cs" />
-        <Compile Include="..\Client\Services\RelayService.cs" Link="Client\Services\RelayService.cs" />
-    </ItemGroup>
-
     <ItemGroup>
         <ProjectReference Include="..\Domain\Domain.csproj" />
         <ProjectReference Include="..\Shared\Shared.csproj" />
