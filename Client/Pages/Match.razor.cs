@@ -15,6 +15,9 @@ namespace Checkers.Client.Pages
 		[Inject]
 		private IGameSessionServices Sessions { get; set; } = default!;
 
+		[Inject]
+		private IRelayService MoveList { get; set; } = default!;
+
 		[CascadingParameter]
 		private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
 
@@ -28,6 +31,15 @@ namespace Checkers.Client.Pages
 		private Board CurrentBoard => Board.FromSquares(Session!.BoardSize, Session.Squares);
 		private PlayerColor MyColor => Session!.BlackPlayerId == myUserId ? PlayerColor.Black : PlayerColor.White;
 		private bool IsMyTurn => Session is { Status: SessionStatus.InProgress } session && session.CurrentPlayer == MyColor;
+
+		/// <summary>
+		/// Partway through a multi-jump only the jumping piece may move, so it stays selected.
+		/// </summary>
+		private Square? Selected => (IsMyTurn ? Sessions.Replay?.Game.JumpingPiece : null) ?? selected;
+
+		private IReadOnlyCollection<Square> Highlighted => IsMyTurn && Selected is { } from && Sessions.Replay is { } replay
+			? replay.Game.GetLegalMoves(from).Select(move => move.To).ToList()
+			: [];
 
 		private string StatusText => Session switch
 		{
@@ -44,6 +56,7 @@ namespace Checkers.Client.Pages
 			var state = await AuthenticationState;
 			int.TryParse(state.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out myUserId);
 			Sessions.Changed += OnSessionChanged;
+			MoveList.MovesChanged += OnSessionChanged;
 		}
 
 		private void OnSessionChanged() => _ = InvokeAsync(StateHasChanged);
@@ -87,19 +100,26 @@ namespace Checkers.Client.Pages
 				return;
 
 			var clicked = new Square(square.Row, square.Col);
+			var midJump = Sessions.Replay?.Game.JumpingPiece is not null;
 			if (Board.BelongsTo(CurrentBoard[clicked], MyColor))
 			{
-				selected = selected == clicked ? null : clicked;
+				if (!midJump)
+					selected = selected == clicked ? null : clicked;
+
 				return;
 			}
 
-			if (selected is not { } from)
+			if (Selected is not { } from)
 				return;
 
 			selected = null;
 			await RunAsync(() => Sessions.MakeMoveAsync(new GameMove(from.Row, from.Col, clicked.Row, clicked.Col)));
 		}
 
-		public void Dispose() => Sessions.Changed -= OnSessionChanged;
+		public void Dispose()
+		{
+			Sessions.Changed -= OnSessionChanged;
+			MoveList.MovesChanged -= OnSessionChanged;
+		}
 	}
 }

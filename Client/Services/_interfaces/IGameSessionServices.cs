@@ -8,6 +8,8 @@ namespace Checkers.Client.Services
 	{
 		/// <summary>The match being played, or null when there isn't one.</summary>
 		GameSessionDto? Session { get; }
+		/// <summary>The match replayed through the rules engine, for legal moves and multi-jumps. Null with <see cref="Session"/>.</summary>
+		SessionReplay? Replay { get; }
 		bool IsOpponentConnected { get; }
 		HubConnectionState ConnectionState { get; }
 		/// <summary>Raised off the UI thread whenever any of the above changes.</summary>

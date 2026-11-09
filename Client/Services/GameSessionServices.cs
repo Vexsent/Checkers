@@ -11,23 +11,27 @@ namespace Checkers.Client.Services
 	/// <summary>
 	/// The client's end of the Server's GameHub. It outlives the match page, so navigating away
 	/// doesn't drop the match. The connection is dropped when the logged-in user changes because
-	/// it stays authenticated as whoever opened it.
+	/// it stays authenticated as whoever opened it. Every update is replayed through the rules
+	/// engine and copied into the relay's move list.
 	/// </summary>
-	public class GameSessionServices : IGameSessionServices, IAsyncDisposable
+	internal class GameSessionServices : IGameSessionServices, IAsyncDisposable
 	{
 		private const string NoMatchError = "There is no match in progress.";
 
 		private readonly Uri _hubUrl;
 		private readonly JwtAuthStateProvider _authStateProvider;
+		private readonly IRelayService _relay;
 		private HubConnection? _connection;
 
 		public GameSessionDto? Session { get; private set; }
+		public SessionReplay? Replay { get; private set; }
 		public bool IsOpponentConnected { get; private set; } = true;
 		public HubConnectionState ConnectionState => _connection?.State ?? HubConnectionState.Disconnected;
 		public event Action? Changed;
 
-		public GameSessionServices(IOptions<AppOptions> options, JwtAuthStateProvider authStateProvider)
+		public GameSessionServices(IOptions<AppOptions> options, JwtAuthStateProvider authStateProvider, IRelayService relay)
 		{
+			_relay = relay;
 			_hubUrl = new Uri(new Uri(options.Value.BaseUrl), GameHubRoutes.Path);
 			_authStateProvider = authStateProvider;
 			_authStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
@@ -68,7 +72,13 @@ namespace Checkers.Client.Services
 
 		private void ApplySession(GameSessionDto session)
 		{
+			if (Session?.MatchCode != session.MatchCode)
+				_relay.ClearMoves();
+
+			var replay = SessionReplay.From(session);
 			Session = session;
+			Replay = replay;
+			replay.UpdateMoveList(_relay);
 			Changed?.Invoke();
 		}
 
@@ -133,7 +143,9 @@ namespace Checkers.Client.Services
 			var connection = _connection;
 			_connection = null;
 			Session = null;
+			Replay = null;
 			IsOpponentConnected = true;
+			_relay.ClearMoves();
 
 			if (connection is not null)
 				await connection.DisposeAsync();
