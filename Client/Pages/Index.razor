@@ -3,4 +3,29 @@
 
 <PageTitle>Home</PageTitle>
 
-<BoardView Board="@board" />
+@if (game is null)
+{
+    <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Gap="1.5rem" class="rz-p-8">
+        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0">Checkers</RadzenText>
+        <RadzenText TextStyle="TextStyle.Body1" class="rz-m-0">Two players take turns on this device. Black moves first.</RadzenText>
+        <RadzenButton Text="Start Game" Icon="play_arrow" Size="ButtonSize.Large" Click="@StartGame" />
+    </RadzenStack>
+}
+else
+{
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" AlignItems="AlignItems.Center" Gap="1rem" Wrap="FlexWrap.Wrap" class="rz-mb-4">
+        <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">@StatusText</RadzenText>
+        @if (game.IsOver)
+        {
+            <RadzenButton Text="New Game" Icon="refresh" ButtonStyle="ButtonStyle.Primary" Click="@StartGame" />
+            <RadzenButton Text="Main Menu" Icon="home" ButtonStyle="ButtonStyle.Light" Click="@MainMenu" />
+        }
+        else
+        {
+            <RadzenButton Text="Offer Draw" Icon="handshake" ButtonStyle="ButtonStyle.Secondary" Click="@OfferDrawAsync" />
+            <RadzenButton Text="Resign" Icon="flag" ButtonStyle="ButtonStyle.Danger" Click="@ResignAsync" />
+        }
+    </RadzenStack>
+
+    <BoardView Board="@game.Board" Selected="@selected" Highlighted="@highlighted" OnSquareClicked="@SquareClicked" />
+}
