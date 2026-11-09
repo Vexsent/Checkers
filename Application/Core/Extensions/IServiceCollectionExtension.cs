@@ -4,8 +4,10 @@ using Checkers.Application.Core.Options;
 using Checkers.Application.Core.Repositories;
 using Checkers.Application.Core.Security;
 using Checkers.Application.Core.Services;
+using Checkers.Application.Core.Sessions;
 using Checkers.Persistence.Data.DataContext;
 using Checkers.Persistence.Data.IRepositories;
+using Checkers.Shared.GameModels;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -86,6 +88,16 @@ namespace Checkers.Application.Core.Extensions
 			return services;
 		}
 
+
+		/// <summary>
+		/// Registers live match sessions. Both are singletons because matches live in memory.
+		/// </summary>
+		public static IServiceCollection AddGameSessions(this IServiceCollection services)
+		{
+			services.AddSingleton<IGameRules, PlaceholderGameRules>();
+			services.AddSingleton<IGameSessionManager, GameSessionManager>();
+			return services;
+		}
 
 		public static IServiceCollection AddOptions(this IServiceCollection services, IConfiguration configuration)
 		{
