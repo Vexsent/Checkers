@@ -23,5 +23,6 @@
     <BuildDependency Project="Shared/Shared.csproj" />
   </Project>
   <Project Path="Shared/Shared.csproj" Id="7ee23682-6887-4493-9f6a-1ddd0a40d431" />
+  <Project Path="TestDashboard/TestDashboard.csproj" />
   <Project Path="UnitTests/UnitTests.csproj" Id="4e322395-844d-4906-bcaf-cb6fb1078545" />
 </Solution>

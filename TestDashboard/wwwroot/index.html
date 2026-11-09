@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkers Tests</title>
+<style>
+	:root {
+		color-scheme: light dark;
+		--bg: #f6f5f2;
+		--surface: #ffffff;
+		--border: #dedbd4;
+		--text: #23211d;
+		--muted: #6b675f;
+		--accent: #8c2f24;
+		--accent-text: #ffffff;
+		--pass: #1f7a45;
+		--fail: #b3261e;
+		--run: #8a6100;
+		--code-bg: #f6ecea;
+	}
+	@media (prefers-color-scheme: dark) {
+		:root {
+			--bg: #191816;
+			--surface: #23211e;
+			--border: #3b3833;
+			--text: #efece6;
+			--muted: #a5a096;
+			--accent: #d9685a;
+			--accent-text: #1c1310;
+			--pass: #5cc98a;
+			--fail: #f2877e;
+			--run: #e0b64f;
+			--code-bg: #2f2220;
+		}
+	}
+	* { box-sizing: border-box; }
+	body {
+		margin: 0;
+		background: var(--bg);
+		color: var(--text);
+		font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+	}
+	main { max-width: 1040px; margin: 0 auto; padding: 28px 16px 64px; }
+	header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+	h1 { margin: 0; font-size: 1.6rem; }
+	button {
+		font: inherit;
+		font-weight: 600;
+		color: var(--text);
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 6px;
+		padding: 7px 14px;
+		cursor: pointer;
+	}
+	button:hover:not(:disabled) { border-color: var(--accent); }
+	button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+	button:disabled { opacity: .5; cursor: default; }
+	button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+	button.small { font-size: .85rem; padding: 3px 10px; }
+	.actions { display: flex; gap: 8px; }
+	.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin: 20px 0; }
+	.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+	.tile strong { display: block; font-size: 1.8rem; line-height: 1.2; font-variant-numeric: tabular-nums; }
+	.tile span { color: var(--muted); font-size: .9rem; }
+	.tile.passed strong { color: var(--pass); }
+	.tile.failed strong { color: var(--fail); }
+	.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-bottom: 14px; }
+	.controls input[type=search] {
+		flex: 1 1 240px;
+		font: inherit;
+		color: inherit;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 6px;
+		padding: 7px 10px;
+	}
+	.notice { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; }
+	.notice.error { border-color: var(--fail); }
+	.notice pre { margin: 8px 0 0; max-height: 260px; }
+	details.group { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; }
+	summary { display: flex; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer; list-style-position: inside; }
+	summary .name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+	summary .namespace { display: block; color: var(--muted); font-size: .8rem; }
+	.counts { color: var(--muted); font-size: .9rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+	.counts .has-failed { color: var(--fail); font-weight: 600; }
+	.test { border-top: 1px solid var(--border); padding: 7px 14px; }
+	.test-line { display: flex; align-items: center; gap: 12px; }
+	.status { flex: none; width: 74px; font-size: .85rem; font-weight: 600; color: var(--muted); }
+	.status.Passed { color: var(--pass); }
+	.status.Failed { color: var(--fail); }
+	.status.Running { color: var(--run); }
+	.method { flex: 1; min-width: 0; overflow-wrap: anywhere; font-family: ui-monospace, Consolas, monospace; font-size: .88rem; }
+	.duration { color: var(--muted); font-size: .85rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+	pre {
+		margin: 8px 0 2px;
+		padding: 10px;
+		overflow: auto;
+		max-height: 220px;
+		background: var(--code-bg);
+		border-radius: 6px;
+		font: .82rem/1.4 ui-monospace, Consolas, monospace;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+	}
+	@media (max-width: 560px) {
+		.status { width: 58px; }
+		.duration { display: none; }
+	}
+</style>
+</head>
+<body>
+<main>
+	<header>
+		<h1>Checkers Tests</h1>
+		<div class="actions">
+			<button id="refresh">Refresh list</button>
+			<button id="runAll" class="primary">Run all</button>
+		</div>
+	</header>
+
+	<section class="tiles" aria-label="Summary">
+		<div class="tile"><strong id="totalCount">–</strong><span>Tests</span></div>
+		<div class="tile passed"><strong id="passedCount">–</strong><span>Passed</span></div>
+		<div class="tile failed"><strong id="failedCount">–</strong><span>Failed</span></div>
+		<div class="tile"><strong id="notRunCount">–</strong><span>Not run</span></div>
+		<div class="tile"><strong id="lastRun">–</strong><span id="lastRunLabel">Last run</span></div>
+	</section>
+
+	<div class="controls">
+		<input id="search" type="search" placeholder="Filter tests by name" aria-label="Filter tests by name">
+		<label><input id="failedOnly" type="checkbox"> Failed only</label>
+	</div>
+
+	<div id="notice" aria-live="polite"></div>
+	<div id="groups"></div>
+</main>
+
+<script>
+	const el = id => document.getElementById(id);
+	const state = {
+		tests: [],              // { name, method, className, params, outcome, durationMs, message, stackTrace }
+		closed: new Set(),      // classes the viewer has collapsed
+		busy: false,
+		query: "",
+		failedOnly: false
+	};
+	let timer = null;
+
+	const esc = text => String(text ?? "").replace(/[&<>"']/g, c =>
+		({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+	// "Ns.Class.Method(piece: BlackPawn)" -> the method to filter on, its class, and the case's parameters.
+	function parseTest(name) {
+		const paren = name.indexOf("(");
+		const method = paren < 0 ? name : name.slice(0, paren);
+		const dot = method.lastIndexOf(".");
+		return {
+			name,
+			method,
+			className: method.slice(0, dot),
+			shortName: method.slice(dot + 1),
+			params: paren < 0 ? "" : name.slice(paren),
+			outcome: "NotRun"
+		};
+	}
+
+	const visibleTests = () => state.tests.filter(t =>
+		(!state.query || t.name.toLowerCase().includes(state.query)) &&
+		(!state.failedOnly || t.outcome === "Failed"));
+
+	const isFiltered = () => Boolean(state.query) || state.failedOnly;
+	const statusLabel = { NotRun: "Not run", Running: "Running", Passed: "Passed", Failed: "Failed", NotExecuted: "Skipped" };
+	const uniqueMethods = tests => [...new Set(tests.map(t => t.method))];
+
+	function formatDuration(ms) {
+		if (ms === undefined) return "";
+		return ms < 1000 ? `${Math.max(ms, 0.1).toFixed(ms < 10 ? 1 : 0)} ms` : `${(ms / 1000).toFixed(2)} s`;
+	}
+
+	function render() {
+		const count = outcome => state.tests.filter(t => t.outcome === outcome).length;
+		el("totalCount").textContent = state.tests.length;
+		el("passedCount").textContent = count("Passed");
+		el("failedCount").textContent = count("Failed");
+		el("notRunCount").textContent = state.tests.length - count("Passed") - count("Failed");
+
+		const visible = visibleTests();
+		el("runAll").textContent = isFiltered() ? `Run ${visible.length} shown` : "Run all";
+		el("runAll").disabled = state.busy || visible.length === 0;
+		el("refresh").disabled = state.busy;
+
+		const byClass = new Map();
+		for (const test of visible) {
+			if (!byClass.has(test.className)) byClass.set(test.className, []);
+			byClass.get(test.className).push(test);
+		}
+
+		el("groups").innerHTML = [...byClass.entries()].map(([className, tests]) => {
+			const dot = className.lastIndexOf(".");
+			const passed = tests.filter(t => t.outcome === "Passed").length;
+			const failed = tests.filter(t => t.outcome === "Failed").length;
+			return `<details class="group" data-class="${esc(className)}" ${state.closed.has(className) ? "" : "open"}>
+				<summary>
+					<span class="name"><span class="namespace">${esc(className.slice(0, dot))}</span>${esc(className.slice(dot + 1))}</span>
+					<span class="counts">${failed ? `<span class="has-failed">${failed} failed</span> · ` : ""}${passed}/${tests.length} passed</span>
+					<button class="small" data-run-class="${esc(className)}" ${state.busy ? "disabled" : ""}>Run</button>
+				</summary>
+				${tests.map(renderTest).join("")}
+			</details>`;
+		}).join("") || (state.tests.length ? `<div class="notice">No tests match.</div>` : "");
+	}
+
+	function renderTest(test) {
+		const failure = test.outcome === "Failed" && (test.message || test.stackTrace)
+			? `<pre>${esc(test.message)}${test.stackTrace ? "\n\n" + esc(test.stackTrace) : ""}</pre>`
+			: "";
+		return `<div class="test">
+			<div class="test-line">
+				<span class="status ${esc(test.outcome)}">${esc(statusLabel[test.outcome] ?? test.outcome)}</span>
+				<span class="method">${esc(test.shortName)}${esc(test.params)}</span>
+				<span class="duration">${esc(formatDuration(test.durationMs))}</span>
+				<button class="small" data-run-method="${esc(test.method)}" ${state.busy ? "disabled" : ""}>Run</button>
+			</div>
+			${failure}
+		</div>`;
+	}
+
+	function showNotice(html, isError = false) {
+		el("notice").innerHTML = html ? `<div class="notice ${isError ? "error" : ""}">${html}</div>` : "";
+	}
+
+	async function errorText(response) {
+		const body = await response.text();
+		try {
+			const problem = JSON.parse(body);
+			return problem.detail ?? problem.title ?? body;
+		} catch {
+			return body;
+		}
+	}
+
+	async function loadTests() {
+		state.busy = true;
+		showNotice("Building and finding tests…");
+		render();
+		try {
+			const response = await fetch("/api/tests");
+			if (!response.ok) {
+				showNotice(`Could not list the tests.<pre>${esc(await errorText(response))}</pre>`, true);
+				return;
+			}
+			const previous = new Map(state.tests.map(t => [t.name, t]));
+			state.tests = (await response.json()).map(name => ({ ...parseTest(name), ...resultFields(previous.get(name)) }));
+			showNotice("");
+		} catch (error) {
+			showNotice(`Could not reach the dashboard server. ${esc(error.message)}`, true);
+		} finally {
+			state.busy = false;
+			render();
+		}
+	}
+
+	const resultFields = test => test
+		? { outcome: test.outcome, durationMs: test.durationMs, message: test.message, stackTrace: test.stackTrace }
+		: {};
+
+	// An empty target list asks the server to run everything.
+	async function run(targets) {
+		const targeted = targets.length ? new Set(targets) : null;
+		const previousOutcomes = new Map();
+		for (const test of state.tests) {
+			if (targeted && !targeted.has(test.method)) continue;
+			previousOutcomes.set(test, resultFields(test));
+			Object.assign(test, { outcome: "Running", durationMs: undefined, message: undefined, stackTrace: undefined });
+		}
+
+		state.busy = true;
+		showNotice("");
+		const started = performance.now();
+		el("lastRunLabel").textContent = "Running";
+		timer = setInterval(() => el("lastRun").textContent = `${((performance.now() - started) / 1000).toFixed(0)} s`, 250);
+		render();
+
+		let failedRun = false;
+		try {
+			const response = await fetch("/api/run", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ targets })
+			});
+			if (!response.ok) {
+				failedRun = true;
+				showNotice(`The tests did not run.<pre>${esc(await errorText(response))}</pre>`, true);
+			} else {
+				const byName = new Map(state.tests.map(t => [t.name, t]));
+				for (const result of await response.json()) {
+					const test = byName.get(result.name);
+					if (test) Object.assign(test, {
+						outcome: result.outcome,
+						durationMs: result.durationMs,
+						message: result.message,
+						stackTrace: result.stackTrace
+					});
+				}
+			}
+		} catch (error) {
+			failedRun = true;
+			showNotice(`Could not reach the dashboard server. ${esc(error.message)}`, true);
+		} finally {
+			// Anything the run didn't report goes back to what it showed before.
+			for (const [test, previous] of previousOutcomes) {
+				if (test.outcome === "Running") Object.assign(test, previous);
+			}
+			clearInterval(timer);
+			el("lastRun").textContent = `${((performance.now() - started) / 1000).toFixed(1)} s`;
+			el("lastRunLabel").textContent = failedRun ? "Last run failed" : "Last run";
+			state.busy = false;
+			render();
+		}
+	}
+
+	el("runAll").addEventListener("click", () => run(isFiltered() ? uniqueMethods(visibleTests()) : []));
+	el("refresh").addEventListener("click", loadTests);
+	el("search").addEventListener("input", e => { state.query = e.target.value.trim().toLowerCase(); render(); });
+	el("failedOnly").addEventListener("change", e => { state.failedOnly = e.target.checked; render(); });
+
+	el("groups").addEventListener("click", e => {
+		const button = e.target.closest("button");
+		if (!button) return;
+		e.preventDefault(); // a button inside <summary> would otherwise toggle the group
+		if (button.dataset.runMethod) run([button.dataset.runMethod]);
+		else if (button.dataset.runClass) run(uniqueMethods(state.tests.filter(t => t.className === button.dataset.runClass)));
+	});
+
+	// Remembers collapsed groups, because render() rebuilds them all.
+	el("groups").addEventListener("toggle", e => {
+		const group = e.target;
+		if (group.open) state.closed.delete(group.dataset.class);
+		else state.closed.add(group.dataset.class);
+	}, true);
+
+	loadTests();
+</script>
+</body>
+</html>

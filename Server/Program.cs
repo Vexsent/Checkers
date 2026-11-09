@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Checkers.Client.Extensions;
 using Checkers.Application.Core.Profiles;
+using Checkers.Server.Hubs;
+using Checkers.Shared.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -80,6 +82,10 @@ builder.Services.AddOptions(builder.Configuration);
 //Repositories
 builder.Services.AddRepositories();
 
+//Live match sessions
+builder.Services.AddSignalR();
+builder.Services.AddGameSessions();
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -104,6 +110,7 @@ app.UseCors();
 
 app.MapRazorPages();
 app.MapControllers();
+app.MapHub<GameHub>(GameHubRoutes.Path);
 app.MapStaticAssets();
 
 app.Run();
