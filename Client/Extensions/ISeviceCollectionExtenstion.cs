@@ -13,6 +13,7 @@ namespace Checkers.Client.Extensions
 		public static IServiceCollection AddClientServices(this IServiceCollection services)
 		{
 			services.AddScoped<IUserAuthenticationServices, UserAuthenticationServices>();
+			services.AddScoped<IRelayService, RelayService>();
 
 			//Auth: one JwtAuthStateProvider instance serves both its concrete type (for login/logout)
 			//and AuthenticationStateProvider (for AuthorizeView / AuthorizeRouteView).

@@ -65,7 +65,6 @@ entities.json
 #AI Models
 .claude/*
 .mempalace/*
-*.zip
 
 /research
 /documentation

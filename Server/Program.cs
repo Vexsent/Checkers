@@ -48,7 +48,7 @@ builder.Services.AddAuthorization(options =>
 
 //DbContext
 // Connection strings live in user secrets (dotnet user-secrets --project Server), not appsettings.
-builder.Services.AddCheckersDbContext(builder.Configuration.GetConnectionString("CheckersDb"));
+builder.Services.AddCheckersDbContext(builder.Configuration.GetConnectionString("CheckersDbFallback"));
 		//?? throw new InvalidOperationException("Missing 'ConnectionStrings:CheckersDb'. Set it with: dotnet user-secrets set \"ConnectionStrings:CheckersDb\" \"<connection string>\" --project Server"),
 	//builder.Configuration.GetConnectionString("CheckersDbFallback"));
 
