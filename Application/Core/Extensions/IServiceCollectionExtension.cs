@@ -90,12 +90,15 @@ namespace Checkers.Application.Core.Extensions
 
 
 		/// <summary>
-		/// Registers live match sessions. Both are singletons because matches live in memory.
+		/// Registers live match sessions. The rules and session manager are singletons because matches
+		/// live in memory; the recorder is scoped because it saves through the match history service,
+		/// so call AddMatchHistoryServices too.
 		/// </summary>
 		public static IServiceCollection AddGameSessions(this IServiceCollection services)
 		{
 			services.AddSingleton<IGameRules, CheckersGameRules>();
 			services.AddSingleton<IGameSessionManager, GameSessionManager>();
+			services.AddScoped<IFinishedMatchRecorder, FinishedMatchRecorder>();
 			return services;
 		}
 

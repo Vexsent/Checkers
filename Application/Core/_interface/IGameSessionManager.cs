@@ -19,5 +19,10 @@ namespace Checkers.Application.Core.Services
 		/// Codes of the unfinished matches the user is playing in.
 		/// </summary>
 		IReadOnlyList<string> GetActiveMatchCodes(int userId);
+		/// <summary>
+		/// True the first time it's called for a finished match and false after that, so a match
+		/// that both players finish at once is still saved only once.
+		/// </summary>
+		bool TryClaimRecording(string matchCode);
 	}
 }
