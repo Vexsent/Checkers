@@ -20,6 +20,6 @@ To update after new commits: `git pull && docker compose up -d --build`.
 Logs: `docker compose logs -f checkers-server`.
 
 Reverse proxy:
-- Forward your domain (e.g. `checkers.example.com`) to `http://<server-ip>:8080`.
+- Forward `checkers.nartleb.app` to `http://<server-ip>:8080`.
 - Turn on WebSocket support. Live matches use SignalR, which needs WebSockets.
-- Set the client's `BaseUrl` in `Client/Resources/Raw/appsettings.json` to that HTTPS address.
+- The client's production `BaseUrl` (`Client/Resources/Raw/appsettings.json`) is `https://checkers.nartleb.app/`.
