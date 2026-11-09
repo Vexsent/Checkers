@@ -38,6 +38,7 @@
             <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
                 @if (Session.Status == SessionStatus.InProgress)
                 {
+                    <RadzenButton Text="Offer draw" ButtonStyle="ButtonStyle.Secondary" Disabled="@(busy || Session.DrawOfferedBy is not null)" Click="@OfferDraw" />
                     <RadzenButton Text="Resign" ButtonStyle="ButtonStyle.Danger" Disabled="@busy" Click="@Resign" />
                 }
                 <RadzenButton Text="Leave" ButtonStyle="ButtonStyle.Light" Disabled="@busy" Click="@Leave" />
@@ -58,6 +59,23 @@
         else if (!Sessions.IsOpponentConnected && Session.Status == SessionStatus.InProgress)
         {
             <RadzenAlert AlertStyle="AlertStyle.Warning" AllowClose="false" Shade="Shade.Lighter">Your opponent has disconnected.</RadzenAlert>
+        }
+
+        @if (Session.Status == SessionStatus.InProgress && OpponentOfferedDraw)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Info" AllowClose="false" Shade="Shade.Lighter">
+                Your opponent offers a draw.
+                <RadzenButton Text="Accept" Size="ButtonSize.Small" Disabled="@busy" Click="@(() => AnswerDraw(true))" />
+                <RadzenButton Text="Decline" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Disabled="@busy" Click="@(() => AnswerDraw(false))" />
+            </RadzenAlert>
+        }
+        else if (Session.Status == SessionStatus.InProgress && IOfferedDraw)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Info" AllowClose="false" Shade="Shade.Lighter">Draw offered. Waiting for your opponent to answer.</RadzenAlert>
+        }
+        else if (Session.Status == SessionStatus.InProgress && drawNotice is not null)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Info" AllowClose="false" Shade="Shade.Lighter">@drawNotice</RadzenAlert>
         }
 
         <div class="match-body">

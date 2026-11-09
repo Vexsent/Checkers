@@ -55,51 +55,57 @@ namespace Checkers.Application.Core.Sessions
 			}
 		}
 
-		public SessionResult MakeMove(string matchCode, int userId, GameMove move)
-		{
-			if (!_matches.TryGetValue(matchCode, out var match))
-				return SessionResult.Failure("Match not found.");
-
-			lock (match)
+		public SessionResult MakeMove(string matchCode, int userId, GameMove move) =>
+			ActOnMatch(matchCode, userId, (match, color) =>
 			{
-				if (!match.HasPlayer(userId))
-					return SessionResult.Failure("You are not a player in this match.");
-
-				if (match.Status != SessionStatus.InProgress)
-					return SessionResult.Failure("This match is not in progress.");
-
-				if (match.ColorOf(userId) != match.CurrentPlayer)
-					return SessionResult.Failure("It is not your turn.");
+				if (color != match.CurrentPlayer)
+					return SessionResult.Failure(Game.NotYourTurnError);
 
 				if (match.Game.TryMove(move) is { } error)
 					return SessionResult.Failure(error);
 
 				match.Moves.Add(move);
+				// Playing on answers a draw offer, from either side.
+				match.DrawOfferedBy = null;
 
 				if (match.Game.Outcome != GameOutcome.InProgress)
 					match.Finish(match.Game.Outcome);
 
 				return SessionResult.Success(match.ToDto());
-			}
-		}
+			});
 
-		public SessionResult Resign(string matchCode, int userId)
-		{
-			if (!_matches.TryGetValue(matchCode, out var match))
-				return SessionResult.Failure("Match not found.");
-
-			lock (match)
+		public SessionResult Resign(string matchCode, int userId) =>
+			ActOnMatch(matchCode, userId, (match, color) =>
 			{
-				if (!match.HasPlayer(userId))
-					return SessionResult.Failure("You are not a player in this match.");
-
-				if (match.Status != SessionStatus.InProgress)
-					return SessionResult.Failure("This match is not in progress.");
-
-				match.Finish(match.ColorOf(userId) == PlayerColor.Black ? GameOutcome.WhiteWon : GameOutcome.BlackWon);
+				match.Finish(color == PlayerColor.Black ? GameOutcome.WhiteWon : GameOutcome.BlackWon);
 				return SessionResult.Success(match.ToDto());
-			}
-		}
+			});
+
+		public SessionResult OfferDraw(string matchCode, int userId) =>
+			ActOnMatch(matchCode, userId, (match, color) =>
+			{
+				if (match.DrawOfferedBy is not null)
+					return SessionResult.Failure(Game.DrawAlreadyOfferedError);
+
+				match.DrawOfferedBy = color;
+				return SessionResult.Success(match.ToDto());
+			});
+
+		public SessionResult AnswerDraw(string matchCode, int userId, bool accept) =>
+			ActOnMatch(matchCode, userId, (match, color) =>
+			{
+				if (match.DrawOfferedBy is not { } offeredBy)
+					return SessionResult.Failure(Game.NoDrawOfferError);
+
+				if (offeredBy == color)
+					return SessionResult.Failure(Game.OwnDrawOfferError);
+
+				match.DrawOfferedBy = null;
+				if (accept)
+					match.Finish(GameOutcome.Draw);
+
+				return SessionResult.Success(match.ToDto());
+			});
 
 		public IReadOnlyList<string> GetActiveMatchCodes(int userId)
 		{
@@ -131,6 +137,27 @@ namespace Checkers.Application.Core.Sessions
 			}
 		}
 
+		/// <summary>
+		/// Runs <paramref name="action"/> under the match's lock once the user is known to be one of
+		/// its players and the match is in progress. The action gets the user's color.
+		/// </summary>
+		private SessionResult ActOnMatch(string matchCode, int userId, Func<LiveMatch, PlayerColor, SessionResult> action)
+		{
+			if (!_matches.TryGetValue(matchCode, out var match))
+				return SessionResult.Failure("Match not found.");
+
+			lock (match)
+			{
+				if (!match.HasPlayer(userId))
+					return SessionResult.Failure("You are not a player in this match.");
+
+				if (match.Status != SessionStatus.InProgress)
+					return SessionResult.Failure("This match is not in progress.");
+
+				return action(match, match.ColorOf(userId));
+			}
+		}
+
 		private sealed class LiveMatch(int blackPlayerId, string blackPlayerName, IRulesGame game)
 		{
 			public string Code { get; set; } = string.Empty;
@@ -146,6 +173,7 @@ namespace Checkers.Application.Core.Sessions
 			public DateTime? StartedAtUtc { get; set; }
 			public DateTime? EndedAtUtc { get; private set; }
 			public bool RecordingClaimed { get; set; }
+			public PlayerColor? DrawOfferedBy { get; set; }
 
 			public bool HasPlayer(int userId) => userId == BlackPlayerId || userId == WhitePlayerId;
 			public PlayerColor ColorOf(int userId) => userId == BlackPlayerId ? PlayerColor.Black : PlayerColor.White;
@@ -155,6 +183,7 @@ namespace Checkers.Application.Core.Sessions
 				Outcome = outcome;
 				Status = SessionStatus.Finished;
 				EndedAtUtc = DateTime.UtcNow;
+				DrawOfferedBy = null;
 			}
 
 			public GameSessionDto ToDto() => new()
@@ -171,7 +200,8 @@ namespace Checkers.Application.Core.Sessions
 				Squares = Game.Board.ToSquares(),
 				Moves = [.. Moves],
 				StartedAtUtc = StartedAtUtc,
-				EndedAtUtc = EndedAtUtc
+				EndedAtUtc = EndedAtUtc,
+				DrawOfferedBy = DrawOfferedBy
 			};
 		}
 	}

@@ -50,6 +50,12 @@ namespace Checkers.Server.Hubs
 		public Task<SessionResult> Resign(string matchCode) =>
 			BroadcastAsync(sessions.Resign(matchCode, UserId));
 
+		public Task<SessionResult> OfferDraw(string matchCode) =>
+			BroadcastAsync(sessions.OfferDraw(matchCode, UserId));
+
+		public Task<SessionResult> AnswerDraw(string matchCode, bool accept) =>
+			BroadcastAsync(sessions.AnswerDraw(matchCode, UserId, accept));
+
 		public override async Task OnDisconnectedAsync(Exception? exception)
 		{
 			foreach (var matchCode in sessions.GetActiveMatchCodes(UserId))

@@ -51,6 +51,14 @@ namespace Checkers.Client.Services
 			? InvokeAsync(connection => connection.InvokeAsync<SessionResult>("Resign", session.MatchCode))
 			: Task.FromResult<string?>(NoMatchError);
 
+		public Task<string?> OfferDrawAsync() => Session is { } session
+			? InvokeAsync(connection => connection.InvokeAsync<SessionResult>("OfferDraw", session.MatchCode))
+			: Task.FromResult<string?>(NoMatchError);
+
+		public Task<string?> AnswerDrawAsync(bool accept) => Session is { } session
+			? InvokeAsync(connection => connection.InvokeAsync<SessionResult>("AnswerDraw", session.MatchCode, accept))
+			: Task.FromResult<string?>(NoMatchError);
+
 		public Task LeaveAsync() => ResetAsync();
 
 		private async Task<string?> InvokeAsync(Func<HubConnection, Task<SessionResult>> call)

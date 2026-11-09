@@ -23,6 +23,10 @@ namespace Checkers.Client.Services
 		Task<string?> MakeMoveAsync(GameMove move);
 		/// <summary>Resigns the match. Returns an error message, or null on success.</summary>
 		Task<string?> ResignAsync();
+		/// <summary>Offers the opponent a draw. Returns an error message, or null on success.</summary>
+		Task<string?> OfferDrawAsync();
+		/// <summary>Accepts or declines the opponent's draw offer. Returns an error message, or null on success.</summary>
+		Task<string?> AnswerDrawAsync(bool accept);
 		/// <summary>Stops following the match on this device. A player can rejoin it with its code.</summary>
 		Task LeaveAsync();
 	}

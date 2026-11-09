@@ -30,11 +30,15 @@ namespace Checkers.Client.Pages
 		private string joinCode = string.Empty;
 		private string? error;
 		private Square? selected;
+		private string? drawNotice;
+		private GameSessionDto? lastSession;
 
 		private GameSessionDto? Session => Sessions.Session;
 		private Board CurrentBoard => Board.FromSquares(Session!.BoardSize, Session.Squares);
 		private PlayerColor MyColor => Session!.BlackPlayerId == myUserId ? PlayerColor.Black : PlayerColor.White;
 		private bool IsMyTurn => Session is { Status: SessionStatus.InProgress } session && session.CurrentPlayer == MyColor;
+		private bool IOfferedDraw => Session?.DrawOfferedBy is { } by && by == MyColor;
+		private bool OpponentOfferedDraw => Session?.DrawOfferedBy is { } by && by != MyColor;
 
 		/// <summary>
 		/// Partway through a multi-jump only the jumping piece may move, so it stays selected.
@@ -69,8 +73,27 @@ namespace Checkers.Client.Pages
 			if (error == Game.NotYourTurnError && IsMyTurn)
 				error = null;
 
+			UpdateDrawNotice();
 			StateHasChanged();
 		});
+
+		/// <summary>
+		/// Tells the player when their draw offer was declined. An offer that a move cleared needs
+		/// no notice, since the move itself shows on the board.
+		/// </summary>
+		private void UpdateDrawNotice()
+		{
+			var session = Session;
+			if (session is null || session.DrawOfferedBy is not null || session.MatchCode != lastSession?.MatchCode)
+				drawNotice = null;
+			else if (lastSession is { } last
+				&& last.DrawOfferedBy == MyColor
+				&& session.Status == SessionStatus.InProgress
+				&& session.Moves.Length == last.Moves.Length)
+				drawNotice = "Your opponent declined the draw.";
+
+			lastSession = session;
+		}
 
 		private async Task RunAsync(Func<Task<string?>> action)
 		{
@@ -91,6 +114,14 @@ namespace Checkers.Client.Pages
 		private Task JoinMatch() => RunAsync(() => Sessions.JoinMatchAsync(joinCode));
 
 		private Task Rejoin() => RunAsync(() => Sessions.JoinMatchAsync(Session!.MatchCode));
+
+		private Task OfferDraw()
+		{
+			drawNotice = null;
+			return RunAsync(Sessions.OfferDrawAsync);
+		}
+
+		private Task AnswerDraw(bool accept) => RunAsync(() => Sessions.AnswerDrawAsync(accept));
 
 		private async Task Resign()
 		{

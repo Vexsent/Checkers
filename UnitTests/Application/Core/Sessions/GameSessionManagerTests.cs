@@ -191,6 +191,109 @@ namespace UnitTests.Application.Core.Sessions
 			Assert.Empty(_manager.GetActiveMatchCodes(Outsider));
 		}
 
+		[Fact]
+		public void OfferDraw_ThenAccept_EndsMatchAsDraw()
+		{
+			var code = StartMatch();
+
+			var offered = _manager.OfferDraw(code, Black).Session!;
+			var session = _manager.AnswerDraw(code, White, accept: true).Session!;
+
+			Assert.Equal(PlayerColor.Black, offered.DrawOfferedBy);
+			Assert.Equal(SessionStatus.Finished, session.Status);
+			Assert.Equal(GameOutcome.Draw, session.Outcome);
+			Assert.Null(session.DrawOfferedBy);
+			Assert.NotNull(session.EndedAtUtc);
+		}
+
+		[Fact]
+		public void OfferDraw_ThenDecline_KeepsMatchGoingAndClearsOffer()
+		{
+			var code = StartMatch();
+			_manager.OfferDraw(code, White);
+
+			var session = _manager.AnswerDraw(code, Black, accept: false).Session!;
+
+			Assert.Equal(SessionStatus.InProgress, session.Status);
+			Assert.Null(session.DrawOfferedBy);
+			Assert.True(_manager.OfferDraw(code, White).Succeeded);
+		}
+
+		[Fact]
+		public void OfferDraw_WhileOfferIsOpen_Fails()
+		{
+			var code = StartMatch();
+			_manager.OfferDraw(code, Black);
+
+			var result = _manager.OfferDraw(code, White);
+
+			Assert.False(result.Succeeded);
+			Assert.Equal(Game.DrawAlreadyOfferedError, result.Error);
+		}
+
+		[Fact]
+		public void AnswerDraw_OwnOffer_Fails()
+		{
+			var code = StartMatch();
+			_manager.OfferDraw(code, Black);
+
+			var result = _manager.AnswerDraw(code, Black, accept: true);
+
+			Assert.False(result.Succeeded);
+			Assert.Equal(Game.OwnDrawOfferError, result.Error);
+		}
+
+		[Fact]
+		public void AnswerDraw_WithNoOffer_Fails()
+		{
+			var code = StartMatch();
+
+			var result = _manager.AnswerDraw(code, White, accept: true);
+
+			Assert.False(result.Succeeded);
+			Assert.Equal(Game.NoDrawOfferError, result.Error);
+		}
+
+		[Fact]
+		public void MakeMove_WithdrawsOpenDrawOffer()
+		{
+			var code = StartMatch();
+			_manager.OfferDraw(code, White);
+
+			var session = _manager.MakeMove(code, Black, BlackOpening).Session!;
+
+			Assert.Null(session.DrawOfferedBy);
+			Assert.False(_manager.AnswerDraw(code, Black, accept: true).Succeeded);
+		}
+
+		[Fact]
+		public void OfferDraw_BeforeOpponentJoins_Fails()
+		{
+			var code = _manager.Create(Black, "black").Session!.MatchCode;
+
+			Assert.False(_manager.OfferDraw(code, Black).Succeeded);
+		}
+
+		[Fact]
+		public void OfferDraw_ByOutsider_Fails()
+		{
+			var code = StartMatch();
+
+			Assert.False(_manager.OfferDraw(code, Outsider).Succeeded);
+		}
+
+		[Fact]
+		public void Resign_ClearsOpenDrawOffer()
+		{
+			var code = StartMatch();
+			_manager.OfferDraw(code, White);
+
+			var session = _manager.Resign(code, Black).Session!;
+
+			Assert.Null(session.DrawOfferedBy);
+			Assert.False(_manager.AnswerDraw(code, Black, accept: true).Succeeded);
+		}
+
 		/// <summary>
 		/// Accepts every move, then hands the turn to <paramref name="nextPlayer"/> with <paramref name="outcome"/>.
 		/// </summary>

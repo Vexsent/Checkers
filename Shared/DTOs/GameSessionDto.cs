@@ -30,5 +30,9 @@ namespace Checkers.Shared.DTOs
 		/// </summary>
 		public DateTime? StartedAtUtc { get; set; }
 		public DateTime? EndedAtUtc { get; set; }
+		/// <summary>
+		/// The player with an open draw offer, waiting for the opponent to answer.
+		/// </summary>
+		public PlayerColor? DrawOfferedBy { get; set; }
 	}
 }
