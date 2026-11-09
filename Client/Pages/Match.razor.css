@@ -1,0 +1,32 @@
+.match-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+.match-page h1 {
+    margin-top: 0;
+}
+
+.match-page p {
+    margin: 0;
+}
+
+.match-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.match-code strong {
+    font-size: 1.25rem;
+    letter-spacing: 0.1em;
+}
+
+.match-status {
+    margin-top: 0.25rem;
+    font-weight: 600;
+}

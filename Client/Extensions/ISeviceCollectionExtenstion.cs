@@ -21,6 +21,9 @@ namespace Checkers.Client.Extensions
 			services.AddScoped<JwtAuthStateProvider>();
 			services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<JwtAuthStateProvider>());
 
+			//Live matches
+			services.AddScoped<IGameSessionServices, GameSessionServices>();
+
 			return services;
 		}
 	}

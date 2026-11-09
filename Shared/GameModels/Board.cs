@@ -12,8 +12,21 @@ namespace Checkers.Shared.GameModels
 
 		public Board(int size = 8) { Size = size; _squares = new GamePieces[size, size]; }
 
-		public GamePieces this[int row, int col] => _squares[row, col];
+		public GamePieces this[int row, int col]
+		{
+			get => _squares[row, col];
+			set => _squares[row, col] = value;
+		}
+
+		public GamePieces this[Square square]
+		{
+			get => this[square.Row, square.Col];
+			set => this[square.Row, square.Col] = value;
+		}
+
 		public static bool IsPlayable(int row, int col) => (row + col) % 2 == 1;
+		public bool IsOnBoard(Square square) =>
+			square.Row >= 0 && square.Row < Size && square.Col >= 0 && square.Col < Size;
 
 		public static Board CreateStandard(int size = 8)
 		{
@@ -31,5 +44,38 @@ namespace Checkers.Shared.GameModels
 
 			return board;
 		}
+
+		/// <summary>
+		/// Flattens the board row by row so it can be sent over the wire.
+		/// </summary>
+		public GamePieces[] ToSquares()
+		{
+			var squares = new GamePieces[Size * Size];
+			for (int r = 0; r < Size; r++)
+				for (int c = 0; c < Size; c++)
+					squares[r * Size + c] = _squares[r, c];
+
+			return squares;
+		}
+
+		/// <summary>
+		/// Rebuilds a board from the row-by-row layout produced by <see cref="ToSquares"/>.
+		/// </summary>
+		public static Board FromSquares(int size, IReadOnlyList<GamePieces> squares)
+		{
+			if (squares.Count != size * size)
+				throw new ArgumentException($"Expected {size * size} squares but got {squares.Count}.", nameof(squares));
+
+			var board = new Board(size);
+			for (int r = 0; r < size; r++)
+				for (int c = 0; c < size; c++)
+					board._squares[r, c] = squares[r * size + c];
+
+			return board;
+		}
+
+		public static bool BelongsTo(GamePieces piece, PlayerColor color) => color == PlayerColor.Black
+			? piece is GamePieces.BlackPawn or GamePieces.BlackKing
+			: piece is GamePieces.WhitePawn or GamePieces.WhiteKing;
 	}
 }
