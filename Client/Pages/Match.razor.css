@@ -1,5 +1,5 @@
 .match-page {
-    max-width: 900px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 1rem;
 }
@@ -29,4 +29,34 @@
 .match-status {
     margin-top: 0.25rem;
     font-weight: 600;
+}
+
+/* The move list sits beside the board when there's room and drops below it otherwise. */
+.match-body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.match-board {
+    flex: 0 1 auto;
+}
+
+.move-list {
+    flex: 1 1 12rem;
+    min-width: 0;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.move-list h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.1rem;
+}
+
+.move-list ol {
+    margin: 0;
+    padding-left: 2rem;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
 }

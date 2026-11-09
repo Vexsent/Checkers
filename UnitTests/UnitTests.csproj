@@ -26,12 +26,13 @@
 
     <!--
         The Client project is a MAUI app (built separately for Windows, Android, etc.), so this
-        net10.0 test project can't reference it directly. Instead, compile the relay's two files
+        net10.0 test project can't reference it directly. Instead, compile the relay's files and SessionReplay
         into the tests as links: the files stay in Client; the tests just build them too.
     -->
     <ItemGroup>
         <Compile Include="..\Client\Services\_interfaces\IRelayService.cs" Link="Client\Services\IRelayService.cs" />
         <Compile Include="..\Client\Services\RelayService.cs" Link="Client\Services\RelayService.cs" />
+        <Compile Include="..\Client\Services\SessionReplay.cs" Link="Client\Services\SessionReplay.cs" />
     </ItemGroup>
 
     <ItemGroup>

@@ -16,6 +16,14 @@ namespace Checkers.Application.Core.Services
 		SessionResult MakeMove(string matchCode, int userId, GameMove move);
 		SessionResult Resign(string matchCode, int userId);
 		/// <summary>
+		/// Offers the opponent a draw. Only one offer can be open, and any move withdraws it.
+		/// </summary>
+		SessionResult OfferDraw(string matchCode, int userId);
+		/// <summary>
+		/// Accepts (ending the match as a draw) or declines the opponent's open draw offer.
+		/// </summary>
+		SessionResult AnswerDraw(string matchCode, int userId, bool accept);
+		/// <summary>
 		/// Codes of the unfinished matches the user is playing in.
 		/// </summary>
 		IReadOnlyList<string> GetActiveMatchCodes(int userId);

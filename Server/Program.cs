@@ -87,6 +87,9 @@ builder.Services.AddRepositories();
 builder.Services.AddSignalR();
 builder.Services.AddGameSessions();
 
+//Health check for Docker / the reverse proxy
+builder.Services.AddHealthChecks();
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -112,6 +115,7 @@ app.UseCors();
 app.MapRazorPages();
 app.MapControllers();
 app.MapHub<GameHub>(GameHubRoutes.Path);
+app.MapHealthChecks("/health").AllowAnonymous();
 app.MapStaticAssets();
 
 app.Run();

@@ -5,6 +5,7 @@ using Checkers.Shared.Enums;
 using Checkers.Shared.GameModels;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using Radzen;
 // Client.Services also gets a Square type from the relay branch, so pin this one.
 using Square = Checkers.Shared.GameModels.Square;
 
@@ -15,6 +16,12 @@ namespace Checkers.Client.Pages
 		[Inject]
 		private IGameSessionServices Sessions { get; set; } = default!;
 
+		[Inject]
+		private IRelayService MoveList { get; set; } = default!;
+
+		[Inject]
+		private DialogService DialogService { get; set; } = default!;
+
 		[CascadingParameter]
 		private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
 
@@ -23,11 +30,24 @@ namespace Checkers.Client.Pages
 		private string joinCode = string.Empty;
 		private string? error;
 		private Square? selected;
+		private string? drawNotice;
+		private GameSessionDto? lastSession;
 
 		private GameSessionDto? Session => Sessions.Session;
 		private Board CurrentBoard => Board.FromSquares(Session!.BoardSize, Session.Squares);
 		private PlayerColor MyColor => Session!.BlackPlayerId == myUserId ? PlayerColor.Black : PlayerColor.White;
 		private bool IsMyTurn => Session is { Status: SessionStatus.InProgress } session && session.CurrentPlayer == MyColor;
+		private bool IOfferedDraw => Session?.DrawOfferedBy is { } by && by == MyColor;
+		private bool OpponentOfferedDraw => Session?.DrawOfferedBy is { } by && by != MyColor;
+
+		/// <summary>
+		/// Partway through a multi-jump only the jumping piece may move, so it stays selected.
+		/// </summary>
+		private Square? Selected => (IsMyTurn ? Sessions.Replay?.Game.JumpingPiece : null) ?? selected;
+
+		private IReadOnlyCollection<Square> Highlighted => IsMyTurn && Selected is { } from && Sessions.Replay is { } replay
+			? replay.Game.GetLegalMoves(from).Select(move => move.To).ToList()
+			: [];
 
 		private string StatusText => Session switch
 		{
@@ -44,9 +64,36 @@ namespace Checkers.Client.Pages
 			var state = await AuthenticationState;
 			int.TryParse(state.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out myUserId);
 			Sessions.Changed += OnSessionChanged;
+			MoveList.MovesChanged += OnSessionChanged;
 		}
 
-		private void OnSessionChanged() => _ = InvokeAsync(StateHasChanged);
+		private void OnSessionChanged() => _ = InvokeAsync(() =>
+		{
+			// The out-of-turn warning is stale once it's this player's turn.
+			if (error == Game.NotYourTurnError && IsMyTurn)
+				error = null;
+
+			UpdateDrawNotice();
+			StateHasChanged();
+		});
+
+		/// <summary>
+		/// Tells the player when their draw offer was declined. An offer that a move cleared needs
+		/// no notice, since the move itself shows on the board.
+		/// </summary>
+		private void UpdateDrawNotice()
+		{
+			var session = Session;
+			if (session is null || session.DrawOfferedBy is not null || session.MatchCode != lastSession?.MatchCode)
+				drawNotice = null;
+			else if (lastSession is { } last
+				&& last.DrawOfferedBy == MyColor
+				&& session.Status == SessionStatus.InProgress
+				&& session.Moves.Length == last.Moves.Length)
+				drawNotice = "Your opponent declined the draw.";
+
+			lastSession = session;
+		}
 
 		private async Task RunAsync(Func<Task<string?>> action)
 		{
@@ -68,7 +115,22 @@ namespace Checkers.Client.Pages
 
 		private Task Rejoin() => RunAsync(() => Sessions.JoinMatchAsync(Session!.MatchCode));
 
-		private Task Resign() => RunAsync(Sessions.ResignAsync);
+		private Task OfferDraw()
+		{
+			drawNotice = null;
+			return RunAsync(Sessions.OfferDrawAsync);
+		}
+
+		private Task AnswerDraw(bool accept) => RunAsync(() => Sessions.AnswerDrawAsync(accept));
+
+		private async Task Resign()
+		{
+			var confirmed = await DialogService.Confirm("Are you sure you want to resign? Your opponent will win.", "Resign",
+				new ConfirmOptions { OkButtonText = "Resign", CancelButtonText = "Cancel" });
+
+			if (confirmed == true)
+				await RunAsync(Sessions.ResignAsync);
+		}
 
 		private Task Leave()
 		{
@@ -83,23 +145,38 @@ namespace Checkers.Client.Pages
 
 		private async Task SquareClicked((int Row, int Col) square)
 		{
-			if (busy || !IsMyTurn)
+			if (busy || Session is not { Status: SessionStatus.InProgress })
 				return;
 
-			var clicked = new Square(square.Row, square.Col);
-			if (Board.BelongsTo(CurrentBoard[clicked], MyColor))
+			if (!IsMyTurn)
 			{
-				selected = selected == clicked ? null : clicked;
+				error = Game.NotYourTurnError;
 				return;
 			}
 
-			if (selected is not { } from)
+			error = null;
+
+			var clicked = new Square(square.Row, square.Col);
+			var midJump = Sessions.Replay?.Game.JumpingPiece is not null;
+			if (Board.BelongsTo(CurrentBoard[clicked], MyColor))
+			{
+				if (!midJump)
+					selected = selected == clicked ? null : clicked;
+
+				return;
+			}
+
+			if (Selected is not { } from)
 				return;
 
 			selected = null;
 			await RunAsync(() => Sessions.MakeMoveAsync(new GameMove(from.Row, from.Col, clicked.Row, clicked.Col)));
 		}
 
-		public void Dispose() => Sessions.Changed -= OnSessionChanged;
+		public void Dispose()
+		{
+			Sessions.Changed -= OnSessionChanged;
+			MoveList.MovesChanged -= OnSessionChanged;
+		}
 	}
 }

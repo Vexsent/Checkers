@@ -1,0 +1,14 @@
+# Runs the Checkers server on a home server. Settings come from .env (copy .env.example).
+#   docker compose up -d --build
+services:
+  checkers-server:
+    build: .
+    image: checkers-server:latest
+    container_name: checkers-server
+    restart: unless-stopped
+    ports:
+      - "${CHECKERS_PORT:-8080}:8080"
+    environment:
+      # Program.cs reads the "CheckersDbfallback" connection string.
+      ConnectionStrings__CheckersDbfallback: ${CHECKERS_DB_CONNECTION:?Set CHECKERS_DB_CONNECTION in .env}
+      AppOptions__Jwt__SigningKey: ${CHECKERS_JWT_SIGNING_KEY:?Set CHECKERS_JWT_SIGNING_KEY in .env}
