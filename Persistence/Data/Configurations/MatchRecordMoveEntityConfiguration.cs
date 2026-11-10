@@ -8,13 +8,10 @@ namespace Checkers.Persistence.Data.Configurations
 	{
 		public void Configure(EntityTypeBuilder<MatchRecordMove> builder)
 		{
-			builder.ToTable("Match_Record_Moves");
+			builder.ToTable("Match_Record_Moves", o => o.ExcludeFromMigrations());
 
 			builder.HasKey(k => k.Id)
 				.HasName("PK_Match_Record_Moves_Id");
-
-			builder.HasAlternateKey(f => f.MatchId)
-				.HasName("FK_Match_Record_Id");
 
 			builder.HasIndex(mv => new { mv.MatchId, mv.MoveNumber }, "IX_Match_Record_Moves")
 				.IsUnique(); 

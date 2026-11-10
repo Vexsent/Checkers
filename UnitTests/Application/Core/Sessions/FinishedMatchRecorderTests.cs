@@ -8,6 +8,7 @@ using Checkers.Shared.Enums;
 using Checkers.Shared.GameModels;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using UnitTests.TestSupport;
 
 namespace UnitTests.Application.Core.Sessions
 {
@@ -32,7 +33,7 @@ namespace UnitTests.Application.Core.Sessions
 			_connection = new SqliteConnection("DataSource=:memory:");
 			_connection.Open();
 
-			_context = new CheckersContext(new DbContextOptionsBuilder<CheckersContext>().UseSqlite(_connection).Options);
+			_context = new SqliteCheckersContext(new DbContextOptionsBuilder<CheckersContext>().UseSqlite(_connection).Options);
 			_context.Database.EnsureCreated();
 
 			_black = NewUser("black");

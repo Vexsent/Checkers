@@ -4,6 +4,7 @@ using Checkers.Persistence.Data.DataContext;
 using Checkers.Shared.Authorization.Policies;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using UnitTests.TestSupport;
 
 namespace UnitTests.Application.Core.Repositories
 {
@@ -38,7 +39,7 @@ namespace UnitTests.Application.Core.Repositories
 			_connection = new SqliteConnection("DataSource=:memory:");
 			_connection.Open();
 
-			_context = new CheckersContext(new DbContextOptionsBuilder<CheckersContext>().UseSqlite(_connection).Options);
+			_context = new SqliteCheckersContext(new DbContextOptionsBuilder<CheckersContext>().UseSqlite(_connection).Options);
 			_context.Database.EnsureCreated();
 
 			_context.Users.Add(NewUser(Username, Email));
