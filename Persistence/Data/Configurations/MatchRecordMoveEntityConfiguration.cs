@@ -10,7 +10,18 @@ namespace Checkers.Persistence.Data.Configurations
 		{
 			builder.ToTable("Match_Record_Moves");
 
-			builder.HasKey(k => k.Id);
+			builder.HasKey(k => k.Id)
+				.HasName("PK_Match_Record_Moves_Id");
+
+			builder.HasAlternateKey(f => f.MatchId)
+				.HasName("FK_Match_Record_Id");
+
+			builder.HasIndex(mv => new { mv.MatchId, mv.MoveNumber }, "IX_Match_Record_Moves")
+				.IsUnique(); 
+
+			builder.Property(p => p.Id)
+				.IsRequired()
+				.HasColumnName("Id");
 
 			builder.Property(p => p.MatchId)
 				.IsRequired()
@@ -36,8 +47,7 @@ namespace Checkers.Persistence.Data.Configurations
 				.IsRequired()
 				.HasColumnName("To_Col");
 
-			builder.HasIndex(mv => new { mv.MatchId, mv.MoveNumber })
-				.IsUnique();
+			
 		}
 	}
 }

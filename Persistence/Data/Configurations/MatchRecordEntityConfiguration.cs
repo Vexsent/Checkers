@@ -10,7 +10,14 @@ namespace Checkers.Persistence.Data.Configurations
 		{
 			builder.ToTable("Match_Records");
 
-			builder.HasKey(k => k.Id);
+			builder.HasKey(k => k.Id)
+				.HasName("PK_Match_Records_Id");
+
+			builder.HasAlternateKey(f => f.BlackPlayerId)
+				.HasName("FK_Black_Player_Id");
+
+			builder.HasAlternateKey(f => f.WhitePlayerId)
+				.HasName("FK_White_Player_Id");
 
 			// Restrict, not cascade: SQL Server rejects two cascade paths from Users into Match_Records,
 			// and deleting a user shouldn't silently erase their opponent's history.
@@ -25,9 +32,11 @@ namespace Checkers.Persistence.Data.Configurations
 				.OnDelete(DeleteBehavior.Restrict);
 
 			builder.Property(p => p.BlackPlayerId)
+				.IsRequired()
 				.HasColumnName("Black_Player_Id");
 
 			builder.Property(p => p.WhitePlayerId)
+				.IsRequired()
 				.HasColumnName("White_Player_Id");
 
 			builder.Property(p => p.Result)
@@ -48,8 +57,6 @@ namespace Checkers.Persistence.Data.Configurations
 				.HasForeignKey(mv => mv.MatchId)
 				.OnDelete(DeleteBehavior.Cascade);
 
-			builder.HasIndex(m => m.BlackPlayerId);
-			builder.HasIndex(m => m.WhitePlayerId);
 		}
 	}
 }
