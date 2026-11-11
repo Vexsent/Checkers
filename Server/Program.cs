@@ -8,6 +8,8 @@ using Microsoft.IdentityModel.Tokens;
 using Checkers.Client.Extensions;
 using Checkers.Application.Core.Profiles;
 using Checkers.Server.Hubs;
+using Checkers.Server.RateLimiting;
+using Microsoft.AspNetCore.SignalR;
 using Checkers.Shared.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -83,8 +85,11 @@ builder.Services.AddOptions(builder.Configuration);
 //Repositories
 builder.Services.AddRepositories();
 
+//Rate limiting (HTTP requests and live-match hub calls)
+builder.Services.AddCheckersRateLimiting(appOptions.RateLimiting);
+
 //Live match sessions
-builder.Services.AddSignalR();
+builder.Services.AddSignalR(options => options.AddFilter<HubRateLimitFilter>());
 builder.Services.AddGameSessions();
 
 //Health check for Docker / the reverse proxy
@@ -106,6 +111,8 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseAuthentication();
+// After authentication so signed-in users are counted per account instead of per IP.
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.UseAntiforgery();
@@ -115,7 +122,8 @@ app.UseCors();
 app.MapRazorPages();
 app.MapControllers();
 app.MapHub<GameHub>(GameHubRoutes.Path);
-app.MapHealthChecks("/health").AllowAnonymous();
-app.MapStaticAssets();
+// Docker's health check polls this, and a page load fetches many static files; neither is limited.
+app.MapHealthChecks("/health").AllowAnonymous().DisableRateLimiting();
+app.MapStaticAssets().DisableRateLimiting();
 
 app.Run();

@@ -39,6 +39,7 @@
         <ProjectReference Include="..\Domain\Domain.csproj" />
         <ProjectReference Include="..\Shared\Shared.csproj" />
         <ProjectReference Include="..\Application\Application.csproj" />
+        <ProjectReference Include="..\Server\Server.csproj" />
     </ItemGroup>
 
 </Project>

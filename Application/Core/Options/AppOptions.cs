@@ -10,5 +10,6 @@ namespace Checkers.Application.Core.Options
 
 		public string BaseUrl { get; set; } = string.Empty;
 		public JwtOptions Jwt { get; set; } = new();
+		public RateLimitingOptions RateLimiting { get; set; } = new();
 	}
 }

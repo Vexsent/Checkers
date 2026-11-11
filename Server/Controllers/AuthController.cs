@@ -1,7 +1,9 @@
 using Checkers.Application.Core.Services;
 using Checkers.Shared.DTOs;
 using Microsoft.AspNetCore.Authorization;
+using Checkers.Server.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Checkers.Server.Controllers
 {
@@ -11,6 +13,7 @@ namespace Checkers.Server.Controllers
 	{
 		[AllowAnonymous]
 		[HttpPost("register")]
+		[EnableRateLimiting(RateLimitingExtensions.AuthPolicy)]
 		public async Task<IActionResult> Register(RegisterRequestDto request)
 		{
 			var result = await authService.RegisterAsync(request);
@@ -22,6 +25,7 @@ namespace Checkers.Server.Controllers
 
 		[AllowAnonymous]
 		[HttpPost("login")]
+		[EnableRateLimiting(RateLimitingExtensions.AuthPolicy)]
 		public async Task<IActionResult> Login(LoginRequestDto request)
 		{
 			var result = await authService.LoginAsync(request);
