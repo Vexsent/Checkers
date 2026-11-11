@@ -12,13 +12,13 @@ namespace Checkers.Persistence.Data.DataContext
 
 		protected override void OnConfiguring(DbContextOptionsBuilder options)
 		{
+
 			base.OnConfiguring(options);
 		}
 
 		protected override void OnModelCreating(ModelBuilder builder)
 		{
 			builder.ApplyConfigurationsFromAssembly(typeof(UserEntityConfiguration).Assembly);
-
 
 			base.OnModelCreating(builder);		
 		}
