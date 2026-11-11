@@ -29,7 +29,12 @@ namespace Checkers.Application.Core.Extensions
 
 			services.AddDbContext<CheckersContext>(options =>
 			{
-				options.UseSqlServer(resolved);
+				// The SQL Server is remote, so a pooled connection can be dropped by the server or the
+				// network while idle. Retrying lets EF open a fresh connection instead of failing the request.
+				options.UseSqlServer(resolved, sql => sql.EnableRetryOnFailure(
+					maxRetryCount: 5,
+					maxRetryDelay: TimeSpan.FromSeconds(10),
+					errorNumbersToAdd: null));
 			});
 
 			return services;
