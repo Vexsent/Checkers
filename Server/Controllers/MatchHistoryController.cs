@@ -24,6 +24,20 @@ namespace Checkers.Server.Controllers
 			return Ok(await matchHistoryService.GetHistoryAsync(userId));
 		}
 
+		/// <summary>
+		/// One of the signed-in user's matches with every move, for replaying it. 404 if the match
+		/// doesn't exist or the user didn't play in it.
+		/// </summary>
+		[HttpGet("{id:int}")]
+		public async Task<IActionResult> GetMatch(int id)
+		{
+			if (!TryGetUserId(out var userId))
+				return Unauthorized();
+
+			var match = await matchHistoryService.GetMatchAsync(userId, id);
+			return match is null ? NotFound() : Ok(match);
+		}
+
 		[HttpPost]
 		public async Task<IActionResult> RecordMatch(RecordMatchRequestDto request)
 		{

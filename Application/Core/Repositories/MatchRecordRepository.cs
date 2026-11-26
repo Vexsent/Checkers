@@ -16,6 +16,14 @@ namespace Checkers.Application.Core.Repositories
 				.OrderByDescending(m => m.EndedAtUtc)
 				.ToListAsync();
 
+		public Task<MatchRecord?> GetByIdWithMovesAsync(int matchId) =>
+			context.MatchRecords
+				.AsNoTracking()
+				.Include(m => m.BlackPlayer)
+				.Include(m => m.WhitePlayer)
+				.Include(m => m.Moves.OrderBy(mv => mv.MoveNumber))
+				.SingleOrDefaultAsync(m => m.Id == matchId);
+
 		public async Task AddAsync(MatchRecord match) =>
 			await context.MatchRecords.AddAsync(match);
 

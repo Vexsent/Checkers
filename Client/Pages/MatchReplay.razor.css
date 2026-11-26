@@ -1,0 +1,76 @@
+.replay-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+.replay-header {
+    margin: 0.75rem 0 1rem;
+}
+
+.replay-header h1 {
+    margin: 0 0 0.25rem;
+}
+
+.replay-page p {
+    margin: 0;
+}
+
+/* The move list sits beside the board when there's room and drops below it otherwise. */
+.replay-body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.replay-board {
+    flex: 0 1 auto;
+}
+
+::deep .replay-controls {
+    margin-top: 0.75rem;
+}
+
+.replay-step {
+    min-width: 8rem;
+    text-align: center;
+    font-weight: 600;
+}
+
+.move-list {
+    flex: 1 1 12rem;
+    min-width: 0;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.move-list h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.1rem;
+}
+
+.move-list ol {
+    margin: 0;
+    padding-left: 2rem;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.move-button {
+    background: none;
+    border: none;
+    padding: 0.1rem 0.25rem;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.move-button:hover {
+    text-decoration: underline;
+}
+
+.current-move .move-button {
+    background: var(--rz-primary-lighter, #dbe7ff);
+    font-weight: 700;
+}

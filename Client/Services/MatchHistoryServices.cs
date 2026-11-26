@@ -7,16 +7,20 @@ namespace Checkers.Client.Services
 	{
 		private readonly IHttpClientFactory _client = httpClientFactory;
 
-		public async Task<MatchHistoryDto?> GetHistoryAsync()
+		public Task<MatchHistoryDto?> GetHistoryAsync() => GetAsync<MatchHistoryDto>("api/match-history");
+
+		public Task<MatchReplayDto?> GetMatchAsync(int matchId) => GetAsync<MatchReplayDto>($"api/match-history/{matchId}");
+
+		private async Task<T?> GetAsync<T>(string path) where T : class
 		{
 			try
 			{
 				var client = _client.CreateClient(HttpClientNames.ServerApi);
-				var response = await client.GetAsync("api/match-history");
+				var response = await client.GetAsync(path);
 				if (!response.IsSuccessStatusCode)
 					return null;
 
-				return await response.Content.ReadFromJsonAsync<MatchHistoryDto>();
+				return await response.Content.ReadFromJsonAsync<T>();
 			}
 			catch (HttpRequestException)
 			{

@@ -26,6 +26,17 @@ namespace Checkers.Application.Core.MatchHistory
 			};
 		}
 
+		public async Task<MatchReplayDto?> GetMatchAsync(int userId, int matchId)
+		{
+			var match = await matchRecordRepository.GetByIdWithMovesAsync(matchId);
+
+			// Someone else's match looks the same as a missing one, so ids can't be probed.
+			if (match is null || (match.BlackPlayerId != userId && match.WhitePlayerId != userId))
+				return null;
+
+			return ToReplay(match, userId);
+		}
+
 		public async Task<RecordMatchResult> RecordMatchAsync(int callerUserId, RecordMatchRequestDto request)
 		{
 			var errors = Validate(callerUserId, request);
@@ -94,26 +105,45 @@ namespace Checkers.Application.Core.MatchHistory
 		private static bool OnBoard(int row, int col) =>
 			row is >= 0 and < BoardSize && col is >= 0 and < BoardSize;
 
-		private static MatchSummaryDto ToSummary(MatchRecord match, int userId)
+		private static MatchSummaryDto ToSummary(MatchRecord match, int userId) =>
+			FillSummary(new MatchSummaryDto(), match, userId);
+
+		private static MatchReplayDto ToReplay(MatchRecord match, int userId)
+		{
+			var replay = FillSummary(new MatchReplayDto(), match, userId);
+			replay.BlackPlayerName = match.BlackPlayer?.Username ?? MatchSummaryDto.ComputerOpponentName;
+			replay.WhitePlayerName = match.WhitePlayer?.Username ?? MatchSummaryDto.ComputerOpponentName;
+			replay.Moves = match.Moves
+				.OrderBy(mv => mv.MoveNumber)
+				.Select(mv => new MatchMoveDto
+				{
+					FromRow = mv.FromRow,
+					FromCol = mv.FromCol,
+					ToRow = mv.ToRow,
+					ToCol = mv.ToCol,
+				})
+				.ToList();
+			return replay;
+		}
+
+		private static T FillSummary<T>(T summary, MatchRecord match, int userId) where T : MatchSummaryDto
 		{
 			var playedBlack = match.BlackPlayerId == userId;
 			var opponent = playedBlack ? match.WhitePlayer : match.BlackPlayer;
 
-			return new MatchSummaryDto
+			summary.Id = match.Id;
+			summary.OpponentName = opponent?.Username ?? MatchSummaryDto.ComputerOpponentName;
+			summary.VsComputer = opponent is null;
+			summary.PlayedAs = playedBlack ? "Black" : "White";
+			summary.Outcome = match.Result switch
 			{
-				Id = match.Id,
-				OpponentName = opponent?.Username ?? MatchSummaryDto.ComputerOpponentName,
-				VsComputer = opponent is null,
-				PlayedAs = playedBlack ? "Black" : "White",
-				Outcome = match.Result switch
-				{
-					MatchResult.Draw => MatchOutcome.Draw,
-					MatchResult.BlackWin => playedBlack ? MatchOutcome.Win : MatchOutcome.Loss,
-					_ => playedBlack ? MatchOutcome.Loss : MatchOutcome.Win,
-				},
-				StartedAtUtc = match.StartedAtUtc,
-				EndedAtUtc = match.EndedAtUtc,
+				MatchResult.Draw => MatchOutcome.Draw,
+				MatchResult.BlackWin => playedBlack ? MatchOutcome.Win : MatchOutcome.Loss,
+				_ => playedBlack ? MatchOutcome.Loss : MatchOutcome.Win,
 			};
+			summary.StartedAtUtc = match.StartedAtUtc;
+			summary.EndedAtUtc = match.EndedAtUtc;
+			return summary;
 		}
 	}
 }

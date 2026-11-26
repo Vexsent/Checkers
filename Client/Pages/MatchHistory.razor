@@ -45,6 +45,12 @@
                     <RadzenDataGridColumn TItem="MatchSummaryDto" Title="Length" Sortable="false">
                         <Template Context="match">@Duration(match)</Template>
                     </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="MatchSummaryDto" Title="" Sortable="false" Width="8rem">
+                        <Template Context="match">
+                            <RadzenButton Text="Replay" Icon="replay" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light"
+                                          Click="@(() => Navigation.NavigateTo($"match-history/{match.Id}"))" />
+                        </Template>
+                    </RadzenDataGridColumn>
                 </Columns>
             </RadzenDataGrid>
         }

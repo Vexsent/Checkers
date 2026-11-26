@@ -11,6 +11,9 @@ namespace Checkers.Client.Pages
 		[Inject]
 		private IMatchHistoryServices MatchHistoryServices { get; set; } = default!;
 
+		[Inject]
+		private NavigationManager Navigation { get; set; } = default!;
+
 		private MatchHistoryDto? history;
 		private bool loading = true;
 

@@ -39,13 +39,40 @@ namespace Checkers.Client.Services
 
 		public static SessionReplay From(GameSessionDto session)
 		{
+			var (game, turns, allLegal) = Play(session.Moves);
+
+			if (!allLegal || !game.Board.ToSquares().SequenceEqual(session.Squares))
+				return FromBoard(session);
+
+			return new SessionReplay(game, turns, isExact: true);
+		}
+
+		/// <summary>
+		/// Replays a saved match's moves from the starting board. If a move is rejected, replay stops
+		/// there: <see cref="Turns"/> holds the turns before it and <see cref="IsExact"/> is false.
+		/// A multi-jump the match ended in the middle of (a resignation) is included as a final turn.
+		/// </summary>
+		public static SessionReplay FromMoves(IEnumerable<GameMove> moves)
+		{
+			var (game, turns, allLegal) = Play(moves, includeUnfinishedTurn: true);
+			return new SessionReplay(game, turns, isExact: allLegal);
+		}
+
+		/// <summary>
+		/// Plays the moves through the rules engine, grouping the one-step moves into turns.
+		/// Stops at the first move the engine rejects.
+		/// </summary>
+		private static (Game Game, List<ReplayedTurn> Turns, bool AllLegal) Play(
+			IEnumerable<GameMove> moves, bool includeUnfinishedTurn = false)
+		{
 			// Live matches start like CheckersGameRules: the standard board with black to move.
 			var game = new Game();
 			var turns = new List<ReplayedTurn>();
 			List<BoardSquare>? path = null;
 			var piece = GamePieces.Empty;
+			var allLegal = true;
 
-			foreach (var move in session.Moves)
+			foreach (var move in moves)
 			{
 				var from = new BoardSquare(move.FromRow, move.FromCol);
 				var to = new BoardSquare(move.ToRow, move.ToCol);
@@ -58,21 +85,31 @@ namespace Checkers.Client.Services
 
 				var mover = game.CurrentTurn;
 				if (!game.TryMove(from, to).Success)
-					return FromBoard(session);
+				{
+					allLegal = false;
+					// The rejected move's square isn't part of what was played.
+					path = path.Count > 1 ? path : null;
+					break;
+				}
 
 				path.Add(to);
 				if (game.CurrentTurn != mover || game.IsOver)
 				{
-					var crowned = !Game.IsKing(piece) && Game.IsKing(game.Board[to]);
-					turns.Add(new ReplayedTurn(piece, path, crowned));
+					turns.Add(Turn(game, piece, path));
 					path = null;
 				}
 			}
 
-			if (!game.Board.ToSquares().SequenceEqual(session.Squares))
-				return FromBoard(session);
+			if (includeUnfinishedTurn && path is not null)
+				turns.Add(Turn(game, piece, path));
 
-			return new SessionReplay(game, turns, isExact: true);
+			return (game, turns, allLegal);
+		}
+
+		private static ReplayedTurn Turn(Game game, GamePieces piece, List<BoardSquare> path)
+		{
+			var crowned = !Game.IsKing(piece) && Game.IsKing(game.Board[path[^1]]);
+			return new ReplayedTurn(piece, path, crowned, game.Board.ToSquares());
 		}
 
 		/// <summary>
@@ -98,6 +135,9 @@ namespace Checkers.Client.Services
 			new(new Game(Board.FromSquares(session.BoardSize, session.Squares), session.CurrentPlayer), [], isExact: false);
 	}
 
-	/// <summary>One completed turn: the piece as it started, its starting square and every landing square.</summary>
-	public sealed record ReplayedTurn(GamePieces Piece, IReadOnlyList<BoardSquare> Path, bool Crowned);
+	/// <summary>
+	/// One completed turn: the piece as it started, its starting square and every landing square,
+	/// and the board right after it (row by row, like <see cref="Board.ToSquares"/>).
+	/// </summary>
+	public sealed record ReplayedTurn(GamePieces Piece, IReadOnlyList<BoardSquare> Path, bool Crowned, GamePieces[] BoardAfter);
 }

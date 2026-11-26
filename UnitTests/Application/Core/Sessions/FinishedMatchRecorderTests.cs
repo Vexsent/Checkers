@@ -1,4 +1,5 @@
 using Checkers.Application.Core.MatchHistory;
+using Checkers.Client.Services;
 using Checkers.Application.Core.Repositories;
 using Checkers.Application.Core.Sessions;
 using Checkers.Domain.Entities;
@@ -122,6 +123,67 @@ namespace UnitTests.Application.Core.Sessions
 
 			Assert.Null(second);
 			Assert.Single(_context.MatchRecords);
+		}
+
+		// Store → pull → replay: a whole live game is saved, read back by each player, and replayed
+		// move by move to the exact board the game ended on.
+		[Theory]
+		[InlineData(1)]
+		[InlineData(7)]
+		[InlineData(42)]
+		public async Task FinishedGame_CanBePulledBackAndReplayedToTheFinalBoard(int seed)
+		{
+			var (manager, recorder, code) = StartMatch(new CheckersGameRules());
+			var random = new Random(seed);
+			var shadow = new Game();
+			GameSessionDto session = null!;
+
+			while (!shadow.IsOver)
+			{
+				var legal = shadow.GetLegalMoves();
+				var move = legal[random.Next(legal.Count)];
+				var mover = shadow.CurrentTurn == PlayerColor.Black ? _black.Id : _white.Id;
+				Assert.True(shadow.TryMove(move.From, move.To).Success);
+				var result = manager.MakeMove(code, mover, new GameMove(move.From.Row, move.From.Col, move.To.Row, move.To.Col));
+				Assert.True(result.Succeeded, result.Error);
+				session = result.Session!;
+			}
+
+			Assert.Equal(SessionStatus.Finished, session.Status);
+			var saved = await recorder.RecordIfFinishedAsync(session);
+			Assert.True(saved!.Success);
+			_context.ChangeTracker.Clear();
+
+			foreach (var player in new[] { _black, _white })
+			{
+				var match = await _matchHistory.GetMatchAsync(player.Id, saved.MatchId!.Value);
+				Assert.NotNull(match);
+				Assert.Equal("black", match.BlackPlayerName);
+				Assert.Equal("white", match.WhitePlayerName);
+				Assert.Equal(session.Moves,
+					match.Moves.Select(m => new GameMove(m.FromRow, m.FromCol, m.ToRow, m.ToCol)));
+
+				var replay = SessionReplay.FromMoves(match.Moves.Select(m => new GameMove(m.FromRow, m.FromCol, m.ToRow, m.ToCol)));
+
+				Assert.True(replay.IsExact);
+				Assert.True(replay.Game.IsOver);
+				Assert.Equal(session.Squares, replay.Turns[^1].BoardAfter);
+				Assert.Equal(session.Squares, replay.Game.Board.ToSquares());
+			}
+		}
+
+		[Fact]
+		public async Task FinishedGame_CannotBePulledByAnotherUser()
+		{
+			var (manager, recorder, code) = StartMatch(new CheckersGameRules());
+			manager.MakeMove(code, _black.Id, BlackOpening);
+			var saved = await recorder.RecordIfFinishedAsync(manager.Resign(code, _white.Id).Session!);
+
+			var outsider = NewUser("outsider");
+			_context.Users.Add(outsider);
+			await _context.SaveChangesAsync();
+
+			Assert.Null(await _matchHistory.GetMatchAsync(outsider.Id, saved!.MatchId!.Value));
 		}
 
 		private (GameSessionManager Manager, FinishedMatchRecorder Recorder, string Code) StartMatch(IGameRules rules)

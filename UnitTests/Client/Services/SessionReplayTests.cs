@@ -113,6 +113,82 @@ namespace UnitTests.Client.Services
 			Assert.False(SessionReplay.From(session).IsExact);
 		}
 
+		// ---- FromMoves (saved matches) ----
+
+		[Fact]
+		public void FromMoves_NoMoves_IsExactWithNoTurns()
+		{
+			var replay = SessionReplay.FromMoves([]);
+
+			Assert.True(replay.IsExact);
+			Assert.Empty(replay.Turns);
+			Assert.Equal(Board.CreateStandard().ToSquares(), replay.Game.Board.ToSquares());
+		}
+
+		[Fact]
+		public void FromMoves_EachTurnKeepsTheBoardAfterIt()
+		{
+			var (afterFirst, _) = Play(new GameMove(2, 1, 3, 0));
+			var (afterSecond, moves) = Play(new GameMove(2, 1, 3, 0), new GameMove(5, 0, 4, 1));
+
+			var replay = SessionReplay.FromMoves(moves);
+
+			Assert.Equal(2, replay.Turns.Count);
+			Assert.Equal(afterFirst.Board.ToSquares(), replay.Turns[0].BoardAfter);
+			Assert.Equal(afterSecond.Board.ToSquares(), replay.Turns[1].BoardAfter);
+		}
+
+		// Every prefix of a seeded game, so a replay that stops partway through a multi-jump
+		// (a resignation mid-jump) is covered as well as whole games.
+		[Theory]
+		[InlineData(1)]
+		[InlineData(2)]
+		[InlineData(3)]
+		[InlineData(4)]
+		[InlineData(5)]
+		public void FromMoves_RandomGame_LastTurnShowsTheBoardAfterEveryStep(int seed)
+		{
+			var random = new Random(seed);
+			var game = new Game();
+			var moves = new List<GameMove>();
+			var completedTurns = 0;
+
+			while (!game.IsOver && moves.Count < 300)
+			{
+				var legal = game.GetLegalMoves();
+				var move = legal[random.Next(legal.Count)];
+				var mover = game.CurrentTurn;
+				Assert.True(game.TryMove(move.From, move.To).Success);
+				moves.Add(new GameMove(move.From.Row, move.From.Col, move.To.Row, move.To.Col));
+				var turnOver = game.CurrentTurn != mover || game.IsOver;
+
+				var replay = SessionReplay.FromMoves(moves);
+
+				Assert.True(replay.IsExact);
+				Assert.Equal(game.Board.ToSquares(), replay.Turns[^1].BoardAfter);
+				// An unfinished multi-jump shows as one extra, partial turn.
+				Assert.Equal(completedTurns + 1, replay.Turns.Count);
+				if (turnOver)
+					completedTurns++;
+			}
+
+			Assert.True(game.IsOver);
+		}
+
+		[Fact]
+		public void FromMoves_IllegalMove_StopsBeforeIt()
+		{
+			var (game, moves) = Play(new GameMove(2, 1, 3, 0), new GameMove(5, 0, 4, 1));
+			moves.Add(new GameMove(2, 3, 4, 5)); // two rows with nothing to jump
+			moves.Add(new GameMove(5, 2, 4, 3));
+
+			var replay = SessionReplay.FromMoves(moves);
+
+			Assert.False(replay.IsExact);
+			Assert.Equal(2, replay.Turns.Count);
+			Assert.Equal(game.Board.ToSquares(), replay.Turns[^1].BoardAfter);
+		}
+
 		[Fact]
 		public void UpdateMoveList_AppendsOnlyNewTurnsAndKeepsExistingEntries()
 		{

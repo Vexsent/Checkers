@@ -141,6 +141,65 @@ namespace UnitTests.Application.Core.MatchHistory
 			Assert.Equal([newer.Id, older.Id], history.Matches.Select(m => m.Id));
 		}
 
+		// ---- GetMatchAsync ----
+
+		[Fact]
+		public async Task GetMatchAsync_UnknownMatch_ReturnsNull()
+		{
+			_matchRecordRepository.Setup(r => r.GetByIdWithMovesAsync(42)).ReturnsAsync((MatchRecord?)null);
+
+			Assert.Null(await _sut.GetMatchAsync(MeId, 42));
+		}
+
+		[Fact]
+		public async Task GetMatchAsync_SomeoneElsesMatch_ReturnsNull()
+		{
+			var stranger = new User { Id = 99, Username = "stranger" };
+			var match = NewMatch(Opponent, stranger, MatchResult.BlackWin);
+			_matchRecordRepository.Setup(r => r.GetByIdWithMovesAsync(match.Id)).ReturnsAsync(match);
+
+			Assert.Null(await _sut.GetMatchAsync(MeId, match.Id));
+		}
+
+		[Fact]
+		public async Task GetMatchAsync_OwnMatch_ReturnsPlayersOutcomeAndMovesInOrder()
+		{
+			var match = NewMatch(Opponent, Me, MatchResult.WhiteWin);
+			match.Moves =
+			[
+				new() { MoveNumber = 2, FromRow = 5, FromCol = 0, ToRow = 4, ToCol = 1 },
+				new() { MoveNumber = 1, FromRow = 2, FromCol = 1, ToRow = 3, ToCol = 2 },
+			];
+			_matchRecordRepository.Setup(r => r.GetByIdWithMovesAsync(match.Id)).ReturnsAsync(match);
+
+			var replay = await _sut.GetMatchAsync(MeId, match.Id);
+
+			Assert.NotNull(replay);
+			Assert.Equal(match.Id, replay.Id);
+			Assert.Equal("rival", replay.BlackPlayerName);
+			Assert.Equal("me", replay.WhitePlayerName);
+			Assert.Equal("rival", replay.OpponentName);
+			Assert.Equal("White", replay.PlayedAs);
+			Assert.Equal(MatchOutcome.Win, replay.Outcome);
+			Assert.Equal(Start, replay.StartedAtUtc);
+			Assert.Equal([2, 5], replay.Moves.Select(m => m.FromRow));
+		}
+
+		[Fact]
+		public async Task GetMatchAsync_AgainstComputer_NamesComputerSide()
+		{
+			var match = NewMatch(Me, null, MatchResult.Draw);
+			_matchRecordRepository.Setup(r => r.GetByIdWithMovesAsync(match.Id)).ReturnsAsync(match);
+
+			var replay = await _sut.GetMatchAsync(MeId, match.Id);
+
+			Assert.Equal("me", replay!.BlackPlayerName);
+			Assert.Equal(MatchSummaryDto.ComputerOpponentName, replay.WhitePlayerName);
+			Assert.True(replay.VsComputer);
+			Assert.Equal(MatchOutcome.Draw, replay.Outcome);
+			Assert.Empty(replay.Moves);
+		}
+
 		// ---- RecordMatchAsync ----
 
 		[Fact]
