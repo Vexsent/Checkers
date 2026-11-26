@@ -53,18 +53,34 @@ namespace Checkers.Client.Pages
 		private ColorChoice creatorColor = ColorChoice.Black;
 		private GameRuleOptions rules = GameRuleOptions.Standard;
 		private bool vsComputer;
+		// The create panel shows either the main settings or the full rule editor.
+		private bool showRuleEditor;
 		private ComputerDifficulty computerLevel = ComputerDifficulty.Medium;
 
-		private sealed record LevelChoice(ComputerDifficulty Value, string Text);
+		// One drop-down for who you play: another player (-1) or the computer at a level.
+		private const int AnotherPlayer = -1;
 
-		private static readonly LevelChoice[] ComputerLevels =
+		private sealed record OpponentChoice(int Key, string Text);
+
+		private static readonly OpponentChoice[] OpponentChoices =
 		[
-			new(ComputerDifficulty.Beginner, "Beginner: plays any legal move"),
-			new(ComputerDifficulty.Easy, "Easy: looks one turn ahead, often misjudges"),
-			new(ComputerDifficulty.Medium, "Medium: looks three turns ahead"),
-			new(ComputerDifficulty.Hard, "Hard: looks five turns ahead"),
-			new(ComputerDifficulty.Expert, "Expert: thinks as deep as it can"),
+			new(AnotherPlayer, "Another player"),
+			new((int)ComputerDifficulty.Beginner, "Computer: Beginner (any legal move)"),
+			new((int)ComputerDifficulty.Easy, "Computer: Easy (one turn ahead)"),
+			new((int)ComputerDifficulty.Medium, "Computer: Medium (three turns ahead)"),
+			new((int)ComputerDifficulty.Hard, "Computer: Hard (five turns ahead)"),
+			new((int)ComputerDifficulty.Expert, "Computer: Expert (thinks deepest)"),
 		];
+
+		private int OpponentKey
+		{
+			get => vsComputer ? (int)computerLevel : AnotherPlayer;
+			set
+			{
+				vsComputer = value != AnotherPlayer;
+				if (vsComputer) computerLevel = (ComputerDifficulty)value;
+			}
+		}
 		private bool useTurnLimit;
 		private int turnLimitAmount = 1;
 		private int turnLimitUnitSeconds = 60 * 60;

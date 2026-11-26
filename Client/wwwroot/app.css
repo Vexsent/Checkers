@@ -139,8 +139,9 @@ h1:focus {
     }
 }
 
-/* Short screens (a phone held sideways): give the page the footer's height. */
-@media (max-height: 600px) {
+/* Phones (narrow, or short when held sideways): the footer is only a copyright line, and the
+   match and create screens need its height more. */
+@media (max-height: 600px), (max-width: 760px) {
     .rz-footer {
         display: none;
     }
