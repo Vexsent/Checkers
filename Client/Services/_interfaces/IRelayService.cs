@@ -17,6 +17,12 @@ namespace Checkers.Client.Services
         /// <summary>All moves so far, oldest first.</summary>
         IReadOnlyList<MoveEntry> Moves { get; }
 
+        /// <summary>
+        /// Squares along each side of the board being played (8, 10 or 12). Ranks are counted from
+        /// White's side, so the notation depends on it.
+        /// </summary>
+        int BoardSize { get; set; }
+
         /// <summary>Raised whenever the move list changes.</summary>
         event Action? MovesChanged;
 

@@ -45,8 +45,7 @@ namespace Checkers.Client.Pages
 
 		// Match settings the creator picks.
 		private ColorChoice creatorColor = ColorChoice.Black;
-		private bool forcedCaptures = true;
-		private bool flyingKings;
+		private GameRuleOptions rules = GameRuleOptions.Standard;
 		private bool useTurnLimit;
 		private int turnLimitAmount = 1;
 		private int turnLimitUnitSeconds = 60 * 60;
@@ -176,7 +175,7 @@ namespace Checkers.Client.Pages
 		private Task CreateMatch() => RunAsync(() => Sessions.CreateMatchAsync(new MatchSettingsDto
 		{
 			CreatorColor = creatorColor,
-			Rules = new GameRuleOptions { ForcedCaptures = forcedCaptures, FlyingKings = flyingKings },
+			Rules = rules,
 			TurnTimeLimitSeconds = useTurnLimit ? (int)TurnLimitSeconds : null,
 		}));
 

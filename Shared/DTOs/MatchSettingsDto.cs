@@ -28,6 +28,9 @@ namespace Checkers.Shared.DTOs
 			if (!Enum.IsDefined(CreatorColor))
 				return "Unknown color choice.";
 
+			if ((Rules ?? GameRuleOptions.Standard).Validate() is { } rulesError)
+				return rulesError;
+
 			if (TurnTimeLimitSeconds is int limit && (limit < MinTurnTimeLimitSeconds || limit > MaxTurnTimeLimitSeconds))
 				return TurnTimeLimitError;
 

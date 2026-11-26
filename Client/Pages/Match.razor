@@ -17,31 +17,87 @@
                 <RadzenFieldset Text="Match settings">
                     <RadzenStack Gap="1rem">
                         <RadzenStack Gap="0.25rem">
+                            <RadzenLabel Text="Game type" Component="game-type" />
+                            <RadzenDropDown @bind-Value="@SelectedVariant" TValue="GameVariant" Data="@VariantChoices" Name="game-type"
+                                            TextProperty="@nameof(VariantChoice.Name)" ValueProperty="@nameof(VariantChoice.Variant)" Style="max-width: 22rem;" />
+                            <RadzenText TextStyle="TextStyle.Caption">@VariantDescription</RadzenText>
+                        </RadzenStack>
+
+                        <RadzenStack Gap="0.25rem">
                             <RadzenLabel Text="Play as" Component="creator-color" />
                             <RadzenSelectBar @bind-Value="@creatorColor" TValue="ColorChoice" Name="creator-color" Size="ButtonSize.Small">
                                 <Items>
-                                    <RadzenSelectBarItem Text="Black (moves first)" Value="ColorChoice.Black" />
-                                    <RadzenSelectBarItem Text="White" Value="ColorChoice.White" />
+                                    <RadzenSelectBarItem Text="@ColorLabel(PlayerColor.Black)" Value="ColorChoice.Black" />
+                                    <RadzenSelectBarItem Text="@ColorLabel(PlayerColor.White)" Value="ColorChoice.White" />
                                     <RadzenSelectBarItem Text="Random" Value="ColorChoice.Random" />
                                 </Items>
                             </RadzenSelectBar>
                         </RadzenStack>
 
-                        <RadzenStack Gap="0">
-                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                                <RadzenSwitch @bind-Value="@forcedCaptures" Name="forced-captures" />
-                                <RadzenLabel Text="Forced captures" Component="forced-captures" />
-                            </RadzenStack>
-                            <RadzenText TextStyle="TextStyle.Caption">@(forcedCaptures ? "A player who can capture must." : "Capturing is optional, but a multi-jump that's started must be finished.")</RadzenText>
-                        </RadzenStack>
+                        <details class="rule-editor">
+                            <summary>Customize rules</summary>
+                            <RadzenStack Gap="0.75rem" class="rule-editor-body">
+                                <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
+                                    <RadzenStack Gap="0.25rem">
+                                        <RadzenLabel Text="Board" Component="board-size" />
+                                        <RadzenDropDown @bind-Value="@BoardSize" TValue="int" Data="@BoardSizes" Name="board-size"
+                                                        TextProperty="Text" ValueProperty="Value" Style="width: 8rem;" />
+                                    </RadzenStack>
+                                    <RadzenStack Gap="0.25rem">
+                                        <RadzenLabel Text="Rows of men" Component="piece-rows" />
+                                        <RadzenNumeric @bind-Value="@PieceRows" TValue="int" Min="1" Max="@(BoardSize / 2 - 1)" Name="piece-rows" Style="width: 6rem;" />
+                                    </RadzenStack>
+                                    <RadzenStack Gap="0.25rem">
+                                        <RadzenLabel Text="Moves first" Component="first-player" />
+                                        <RadzenSelectBar @bind-Value="@FirstPlayer" TValue="PlayerColor" Name="first-player" Size="ButtonSize.Small">
+                                            <Items>
+                                                <RadzenSelectBarItem Text="Black" Value="PlayerColor.Black" />
+                                                <RadzenSelectBarItem Text="White" Value="PlayerColor.White" />
+                                            </Items>
+                                        </RadzenSelectBar>
+                                    </RadzenStack>
+                                </RadzenStack>
 
-                        <RadzenStack Gap="0">
-                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                                <RadzenSwitch @bind-Value="@flyingKings" Name="flying-kings" />
-                                <RadzenLabel Text="Flying kings" Component="flying-kings" />
+                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                                    <RadzenSwitch @bind-Value="@ForcedCaptures" Name="forced-captures" />
+                                    <RadzenLabel Text="Forced captures (a multi-jump that's started must be finished either way)" Component="forced-captures" />
+                                </RadzenStack>
+                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                                    <RadzenSwitch @bind-Value="@MenCaptureBackward" Name="men-backward" />
+                                    <RadzenLabel Text="Men capture backwards" Component="men-backward" />
+                                </RadzenStack>
+                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                                    <RadzenSwitch @bind-Value="@MenCanCaptureKings" Name="men-kings" />
+                                    <RadzenLabel Text="Men can capture kings" Component="men-kings" />
+                                </RadzenStack>
+                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                                    <RadzenSwitch @bind-Value="@FlyingKings" Name="flying-kings" />
+                                    <RadzenLabel Text="Flying kings (move and capture any distance)" Component="flying-kings" />
+                                </RadzenStack>
+                                @if (FlyingKings)
+                                {
+                                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" Style="padding-left: 1.5rem;">
+                                        <RadzenSwitch @bind-Value="@KingStopsBehindCapture" Name="king-stops" />
+                                        <RadzenLabel Text="A capturing king lands right behind the piece" Component="king-stops" />
+                                    </RadzenStack>
+                                }
+                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                                    <RadzenSwitch @bind-Value="@RemoveCapturedAtEndOfMove" Name="remove-end" />
+                                    <RadzenLabel Text="Captured pieces stay on the board until the move ends" Component="remove-end" />
+                                </RadzenStack>
+
+                                <RadzenStack Gap="0.25rem">
+                                    <RadzenLabel Text="When several captures are possible" Component="capture-choice" />
+                                    <RadzenDropDown @bind-Value="@CaptureChoiceValue" TValue="CaptureChoice" Data="@CaptureChoices" Name="capture-choice"
+                                                    TextProperty="Text" ValueProperty="Value" Style="max-width: 26rem;" />
+                                </RadzenStack>
+                                <RadzenStack Gap="0.25rem">
+                                    <RadzenLabel Text="A man reaching the far row mid-capture" Component="promotion" />
+                                    <RadzenDropDown @bind-Value="@Promotion" TValue="PromotionRule" Data="@PromotionChoices" Name="promotion"
+                                                    TextProperty="Text" ValueProperty="Value" Style="max-width: 26rem;" />
+                                </RadzenStack>
                             </RadzenStack>
-                            <RadzenText TextStyle="TextStyle.Caption">@(flyingKings ? "Kings move and capture any distance along a diagonal." : "Kings move one square at a time, forwards or backwards.")</RadzenText>
-                        </RadzenStack>
+                        </details>
 
                         <RadzenStack Gap="0.25rem">
                             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">

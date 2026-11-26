@@ -1,3 +1,4 @@
+using Checkers.Shared.Enums;
 using Checkers.Shared.GameModels;
 
 namespace Checkers.Client.Services
@@ -39,18 +40,48 @@ namespace Checkers.Client.Services
 		}
 
 		/// <summary>
-		/// The match's rules in one line, e.g. "Forced captures · Flying kings · 5 minutes per turn".
+		/// The match's rules in one line, e.g. "Russian (shashki) · 5 minutes per turn". A custom rule
+		/// set lists what differs from American checkers instead of a name.
 		/// </summary>
 		public static string DescribeRules(GameRuleOptions? rules, int? turnTimeLimitSeconds)
 		{
 			rules ??= GameRuleOptions.Standard;
-			var parts = new List<string>
-			{
-				rules.ForcedCaptures ? "Forced captures" : "Optional captures",
-				rules.FlyingKings ? "Flying kings" : "Standard kings",
-				turnTimeLimitSeconds is int limit ? $"{Limit(limit)} per turn" : "No turn time limit",
-			};
+			List<string> parts = rules.Variant == GameVariant.Custom
+				? ["Custom", .. RuleDetails(rules)]
+				: [GameVariants.NameOf(rules)];
+			parts.Add(turnTimeLimitSeconds is int limit ? $"{Limit(limit)} per turn" : "No turn time limit");
 			return string.Join(" · ", parts);
+		}
+
+		/// <summary>
+		/// Each rule that differs from American checkers, in a few words.
+		/// </summary>
+		public static List<string> RuleDetails(GameRuleOptions rules)
+		{
+			var details = new List<string>();
+			if (rules.BoardSize != 8 || rules.PieceRows != 3)
+				details.Add($"{rules.BoardSize}×{rules.BoardSize}, {rules.PiecesPerSide} men each");
+			if (rules.FirstPlayer == PlayerColor.White) details.Add("White moves first");
+			if (!rules.ForcedCaptures) details.Add("Optional captures");
+			if (rules.FlyingKings) details.Add(rules.KingStopsBehindCapture ? "Flying kings (land behind capture)" : "Flying kings");
+			if (rules.MenCaptureBackward) details.Add("Men capture backwards");
+			if (!rules.MenCanCaptureKings) details.Add("Men can't capture kings");
+			details.Add(rules.CaptureChoice switch
+			{
+				CaptureChoice.MostPieces => "Must take the most pieces",
+				CaptureChoice.MostPiecesThenKings => "Must take the most pieces, then kings",
+				CaptureChoice.Italian => "Italian capture priority",
+				CaptureChoice.KingsFirst => "Kings must capture first",
+				_ => "",
+			});
+			details.Add(rules.PromotionDuringCapture switch
+			{
+				PromotionRule.ContinuesAsKing => "Crowned mid-capture, keeps capturing",
+				PromotionRule.OnlyAtEndOfMove => "Crowned only at the end of a move",
+				_ => "",
+			});
+			if (rules.RemoveCapturedAtEndOfMove) details.Add("Captured pieces removed after the move");
+			return details.Where(d => d.Length > 0).ToList();
 		}
 
 		private static string Plural(int count, string unit) => count == 1 ? $"1 {unit}" : $"{count} {unit}s";

@@ -53,19 +53,13 @@ namespace Checkers.Persistence.Data.Configurations
 				.IsRequired()
 				.HasColumnName("End_At_Utc");
 
-			// Rule variations, so a saved match replays with the rules it was played with. The table's
-			// column defaults (standard rules) cover rows saved before these columns existed. No
-			// HasDefaultValue here: with a store default of true, EF would never send false.
-			builder.Property(p => p.ForcedCaptures)
-				.IsRequired()
-				.HasColumnName("Forced_Captures");
-
-			builder.Property(p => p.FlyingKings)
-				.IsRequired()
-				.HasColumnName("Flying_Kings");
-
 			builder.Property(p => p.TurnTimeLimitSeconds)
 				.HasColumnName("Turn_Time_Limit_Seconds");
+
+			// Every rule as JSON, so a saved match replays with the rules it was played with and new
+			// variants don't need new columns.
+			builder.Property(p => p.RulesJson)
+				.HasColumnName("Rules_Json");
 
 			builder.HasMany(m => m.Moves)
 				.WithOne()

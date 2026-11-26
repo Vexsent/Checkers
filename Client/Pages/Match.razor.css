@@ -76,3 +76,12 @@
 .turn-clock-low {
     color: var(--rz-danger);
 }
+
+.rule-editor summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.rule-editor[open] summary {
+    margin-bottom: 0.75rem;
+}

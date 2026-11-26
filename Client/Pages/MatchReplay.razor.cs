@@ -15,7 +15,6 @@ namespace Checkers.Client.Pages
 	/// </summary>
 	public partial class MatchReplay
 	{
-		private const int BoardSize = 8;
 
 		[Inject]
 		private IMatchHistoryServices MatchHistoryServices { get; set; } = default!;
@@ -35,10 +34,12 @@ namespace Checkers.Client.Pages
 
 		private ReplayedTurn? LastTurn => step > 0 ? replay!.Turns[step - 1] : null;
 
-		// Saved matches are always played on the standard board.
+		private GameRuleOptions Rules => match?.Rules ?? GameRuleOptions.Standard;
+
+		// The variant's own board: its size and starting rows.
 		private Board CurrentBoard => LastTurn is { } turn
-			? Board.FromSquares(BoardSize, turn.BoardAfter)
-			: Board.CreateStandard(BoardSize);
+			? Board.FromSquares(Rules.BoardSize, turn.BoardAfter)
+			: Board.CreateStandard(Rules.BoardSize, Rules.PieceRows);
 
 		private Square? LastLanding => LastTurn?.Path[^1];
 
@@ -63,7 +64,7 @@ namespace Checkers.Client.Pages
 				: SessionReplay.FromMoves(match.Moves.Select(m => new GameMove(m.FromRow, m.FromCol, m.ToRow, m.ToCol)), match.Rules);
 
 			// The relay's notation, so moves read the same as during a live match.
-			var notation = new RelayService();
+			var notation = new RelayService { BoardSize = match?.Rules.BoardSize ?? 8 };
 			moveTexts = replay?.Turns
 				.Select(turn => notation.FormatMove(turn.Piece, turn.Path.Select(s => new RelaySquare(s.Row, s.Col)).ToList(), turn.Crowned, turn.IsJump))
 				.ToList() ?? [];

@@ -3,6 +3,7 @@ using Checkers.Domain.Entities;
 using Checkers.Persistence.Data.IRepositories;
 using Checkers.Shared.DTOs;
 using Checkers.Shared.Enums;
+using Checkers.Shared.GameModels;
 using Moq;
 
 namespace UnitTests.Application.Core.MatchHistory
@@ -198,6 +199,66 @@ namespace UnitTests.Application.Core.MatchHistory
 			Assert.True(replay.VsComputer);
 			Assert.Equal(MatchOutcome.Draw, replay.Outcome);
 			Assert.Empty(replay.Moves);
+		}
+
+		// The shape the database backfill writes for old custom rows: only what differs from standard.
+		[Fact]
+		public async Task GetMatchAsync_PartialRulesJson_FillsInTheRestWithStandardRules()
+		{
+			var match = NewMatch(Me, Opponent, MatchResult.Draw);
+			match.RulesJson = "{\"Variant\":\"Custom\",\"ForcedCaptures\":false,\"FlyingKings\":true}";
+			_matchRecordRepository.Setup(r => r.GetByIdWithMovesAsync(match.Id)).ReturnsAsync(match);
+
+			var replay = await _sut.GetMatchAsync(MeId, match.Id);
+
+			Assert.Equal(GameRuleOptions.Standard with { Variant = GameVariant.Custom, ForcedCaptures = false, FlyingKings = true }, replay!.Rules);
+		}
+
+		[Fact]
+		public async Task GetMatchAsync_UnreadableRulesJson_FallsBackToAmerican()
+		{
+			var match = NewMatch(Me, Opponent, MatchResult.Draw);
+			match.RulesJson = "not json";
+			_matchRecordRepository.Setup(r => r.GetByIdWithMovesAsync(match.Id)).ReturnsAsync(match);
+
+			Assert.Equal(GameRuleOptions.Standard, (await _sut.GetMatchAsync(MeId, match.Id))!.Rules);
+		}
+
+		[Fact]
+		public async Task GetMatchAsync_RowWithoutRulesJson_IsAmerican()
+		{
+			var match = NewMatch(Me, Opponent, MatchResult.Draw);
+			_matchRecordRepository.Setup(r => r.GetByIdWithMovesAsync(match.Id)).ReturnsAsync(match);
+
+			Assert.Equal(GameRuleOptions.Standard, (await _sut.GetMatchAsync(MeId, match.Id))!.Rules);
+		}
+
+		[Fact]
+		public async Task RecordMatchAsync_StoresTheWholeRuleSetAsJson()
+		{
+			MatchRecord? saved = null;
+			_matchRecordRepository.Setup(r => r.AddAsync(It.IsAny<MatchRecord>())).Callback<MatchRecord>(m => saved = m);
+			var request = ValidRecordRequest();
+			request.Rules = GameVariants.Find(GameVariant.International)!.Rules;
+			request.Moves = [new() { FromRow = 9, FromCol = 0, ToRow = 8, ToCol = 1 }];
+
+			var result = await _sut.RecordMatchAsync(MeId, request);
+
+			Assert.True(result.Success, string.Join(" ", result.Errors));
+			Assert.Contains("\"International\"", saved!.RulesJson);
+			Assert.Contains("\"BoardSize\":10", saved.RulesJson);
+		}
+
+		[Fact]
+		public async Task RecordMatchAsync_MoveOffAnEightByEightButOnATenByTen_DependsOnTheRules()
+		{
+			var request = ValidRecordRequest();
+			request.Moves = [new() { FromRow = 9, FromCol = 0, ToRow = 8, ToCol = 1 }];
+
+			Assert.False((await _sut.RecordMatchAsync(MeId, request)).Success);
+
+			request.Rules = GameVariants.Find(GameVariant.International)!.Rules;
+			Assert.True((await _sut.RecordMatchAsync(MeId, request)).Success);
 		}
 
 		// ---- RecordMatchAsync ----

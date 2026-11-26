@@ -7,7 +7,8 @@ namespace Checkers.Client.Services
 {
     internal class RelayService : IRelayService
     {
-        private const int BoardSize = 8;
+        /// <inheritdoc />
+        public int BoardSize { get; set; } = 8;
 
         private readonly List<MoveEntry> _moves = new();
 
@@ -98,7 +99,7 @@ namespace Checkers.Client.Services
         };
 
         // Rows are numbered from white's side, so board row 7 is rank 1.
-        private static string SquareName(Square square)
+        private string SquareName(Square square)
         {
             char file = (char)('a' + square.Col);
             int rank = BoardSize - square.Row;

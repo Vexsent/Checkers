@@ -214,8 +214,7 @@ namespace UnitTests.Application.Core.Sessions
 			Assert.Equal(_black.Id, saved.BlackPlayerId);
 			Assert.Equal(_white.Id, saved.WhitePlayerId);
 			Assert.Equal(MatchResult.BlackWin, saved.Result);
-			Assert.True(saved.ForcedCaptures);
-			Assert.False(saved.FlyingKings);
+			Assert.Contains("\"American\"", saved.RulesJson);
 			Assert.Null(saved.TurnTimeLimitSeconds);
 		}
 
@@ -229,6 +228,49 @@ namespace UnitTests.Application.Core.Sessions
 
 			Assert.False(result.Succeeded);
 			Assert.Single(manager.GetActiveMatches(_black.Id));
+		}
+
+		// Each preset: played live, saved, pulled back and replayed with its own rules (board size,
+		// capture rules and all), which have to survive the trip through the rules JSON column.
+		[Theory]
+		[InlineData(GameVariant.Russian)]
+		[InlineData(GameVariant.Pool)]
+		[InlineData(GameVariant.Brazilian)]
+		[InlineData(GameVariant.International)]
+		[InlineData(GameVariant.Canadian)]
+		[InlineData(GameVariant.Spanish)]
+		[InlineData(GameVariant.Italian)]
+		[InlineData(GameVariant.Czech)]
+		[InlineData(GameVariant.Thai)]
+		public async Task PresetGame_IsSavedAndReplaysWithItsRules(GameVariant variant)
+		{
+			var rules = GameVariants.Find(variant)!.Rules;
+			var (manager, recorder, code) = StartMatch(new CheckersGameRules(), new MatchSettingsDto { Rules = rules });
+			var random = new Random(9);
+			var shadow = new Game(rules);
+			GameSessionDto session = null!;
+
+			while (!shadow.IsOver)
+			{
+				var legal = shadow.GetLegalMoves();
+				var move = legal[random.Next(legal.Count)];
+				var mover = shadow.CurrentTurn == PlayerColor.Black ? _black.Id : _white.Id;
+				Assert.True(shadow.TryMove(move.From, move.To).Success);
+				var result = manager.MakeMove(code, mover, new GameMove(move.From.Row, move.From.Col, move.To.Row, move.To.Col));
+				Assert.True(result.Succeeded, result.Error);
+				session = result.Session!;
+			}
+
+			var saved = await recorder.RecordIfFinishedAsync(session);
+			Assert.True(saved!.Success, string.Join(" ", saved.Errors));
+			_context.ChangeTracker.Clear();
+
+			var match = await _matchHistory.GetMatchAsync(_white.Id, saved.MatchId!.Value);
+			Assert.Equal(rules, match!.Rules);
+
+			var replay = SessionReplay.FromMoves(match.Moves.Select(m => new GameMove(m.FromRow, m.FromCol, m.ToRow, m.ToCol)), match.Rules);
+			Assert.True(replay.IsExact);
+			Assert.Equal(session.Squares, replay.Game.Board.ToSquares());
 		}
 
 		[Fact]

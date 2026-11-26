@@ -130,6 +130,8 @@ namespace Checkers.Client.Services
 			if (relay.Moves.Count > Turns.Count)
 				relay.ClearMoves();
 
+			relay.BoardSize = Game.Board.Size;
+
 			foreach (var turn in Turns.Skip(relay.Moves.Count))
 			{
 				var path = turn.Path.Select(square => new RelaySquare(square.Row, square.Col)).ToList();

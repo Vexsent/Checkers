@@ -4,6 +4,8 @@ using Checkers.Persistence.Data.IRepositories;
 using Checkers.Shared.DTOs;
 using Checkers.Shared.Enums;
 using Checkers.Shared.GameModels;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Checkers.Application.Core.MatchHistory
 {
@@ -11,7 +13,7 @@ namespace Checkers.Application.Core.MatchHistory
 		IMatchRecordRepository matchRecordRepository,
 		IUserRepository userRepository) : IMatchHistoryService
 	{
-		private const int BoardSize = 8;
+		private static readonly JsonSerializerOptions RulesJsonOptions = new() { Converters = { new JsonStringEnumConverter() } };
 
 		public async Task<MatchHistoryDto> GetHistoryAsync(int userId)
 		{
@@ -60,8 +62,7 @@ namespace Checkers.Application.Core.MatchHistory
 				Result = request.Result,
 				StartedAtUtc = request.StartedAtUtc,
 				EndedAtUtc = request.EndedAtUtc,
-				ForcedCaptures = (request.Rules ?? GameRuleOptions.Standard).ForcedCaptures,
-				FlyingKings = (request.Rules ?? GameRuleOptions.Standard).FlyingKings,
+				RulesJson = JsonSerializer.Serialize(request.Rules ?? GameRuleOptions.Standard, RulesJsonOptions),
 				TurnTimeLimitSeconds = request.TurnTimeLimitSeconds,
 				Moves = request.Moves.Select((mv, i) => new MatchRecordMove
 				{
@@ -96,18 +97,43 @@ namespace Checkers.Application.Core.MatchHistory
 			if (request.EndedAtUtc < request.StartedAtUtc)
 				errors.Add("A match can't end before it starts.");
 
+			var rules = request.Rules ?? GameRuleOptions.Standard;
+			if (rules.Validate() is { } rulesError)
+				errors.Add(rulesError);
+
 			for (int i = 0; i < request.Moves.Count; i++)
 			{
 				var mv = request.Moves[i];
-				if (!OnBoard(mv.FromRow, mv.FromCol) || !OnBoard(mv.ToRow, mv.ToCol))
+				if (!OnBoard(mv.FromRow, mv.FromCol, rules.BoardSize) || !OnBoard(mv.ToRow, mv.ToCol, rules.BoardSize))
 					errors.Add($"Move {i + 1} is off the board.");
 			}
 
 			return errors;
 		}
 
-		private static bool OnBoard(int row, int col) =>
-			row is >= 0 and < BoardSize && col is >= 0 and < BoardSize;
+		private static bool OnBoard(int row, int col, int boardSize) =>
+			row >= 0 && row < boardSize && col >= 0 && col < boardSize;
+
+		/// <summary>
+		/// The rules a saved match was played with. No JSON means standard American checkers.
+		/// </summary>
+		private static GameRuleOptions RulesOf(MatchRecord match)
+		{
+			if (!string.IsNullOrWhiteSpace(match.RulesJson))
+			{
+				try
+				{
+					if (JsonSerializer.Deserialize<GameRuleOptions>(match.RulesJson, RulesJsonOptions) is { } rules)
+						return rules;
+				}
+				catch (JsonException)
+				{
+					// Unreadable rules: fall back to standard, and the replay page warns if moves don't fit.
+				}
+			}
+
+			return GameRuleOptions.Standard;
+		}
 
 		private static MatchSummaryDto ToSummary(MatchRecord match, int userId) =>
 			FillSummary(new MatchSummaryDto(), match, userId);
@@ -117,7 +143,7 @@ namespace Checkers.Application.Core.MatchHistory
 			var replay = FillSummary(new MatchReplayDto(), match, userId);
 			replay.BlackPlayerName = match.BlackPlayer?.Username ?? MatchSummaryDto.ComputerOpponentName;
 			replay.WhitePlayerName = match.WhitePlayer?.Username ?? MatchSummaryDto.ComputerOpponentName;
-			replay.Rules = new GameRuleOptions { ForcedCaptures = match.ForcedCaptures, FlyingKings = match.FlyingKings };
+			replay.Rules = RulesOf(match);
 			replay.TurnTimeLimitSeconds = match.TurnTimeLimitSeconds;
 			replay.Moves = match.Moves
 				.OrderBy(mv => mv.MoveNumber)
