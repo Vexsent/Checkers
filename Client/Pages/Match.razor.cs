@@ -53,6 +53,19 @@ namespace Checkers.Client.Pages
 		private Square? rejected;
 		private int rejectedCount;
 
+		// After this many illegal tries in one turn, every legal move is shown as a hint.
+		private const int TriesBeforeHints = 3;
+		private int illegalTries;
+		// The turn the tries were counted in (moves played so far), so a new turn starts at zero.
+		private int illegalTriesTurn = -1;
+
+		private int TurnKey => Session?.Moves.Length ?? 0;
+
+		private IReadOnlyCollection<Move> Hints =>
+			IsMyTurn && illegalTriesTurn == TurnKey && illegalTries >= TriesBeforeHints && Sessions.Replay is { } replay
+				? replay.Game.GetLegalMoves()
+				: [];
+
 		// Refusals that mean "not a legal move here", shown as a red square rather than a message.
 		// Anything else (a lost connection, a timed-out turn) still shows as an alert.
 		private static readonly HashSet<string> IllegalMoveErrors =
@@ -328,6 +341,18 @@ namespace Checkers.Client.Pages
 		{
 			rejected = square;
 			rejectedCount++;
+
+			// Only tries on the player's own turn count towards hints.
+			if (!IsMyTurn)
+				return;
+
+			if (illegalTriesTurn != TurnKey)
+			{
+				illegalTriesTurn = TurnKey;
+				illegalTries = 0;
+			}
+
+			illegalTries++;
 		}
 
 		public void Dispose()

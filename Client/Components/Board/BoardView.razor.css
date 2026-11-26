@@ -62,3 +62,21 @@
         box-shadow: inset 0 0 0 4px #d32f2f;
     }
 }
+
+/* Hints after repeated illegal tries: pieces that can move, and where they can go. */
+.hint-piece {
+    box-shadow: inset 0 0 0 4px #2e9d4f;
+}
+
+.hint-target {
+    background-image: radial-gradient(circle, rgba(46, 157, 79, 0.85) 18%, transparent 20%);
+}
+
+/* The selected piece's own moves keep the usual gold marks on top of a hint. */
+.selected-square.hint-piece {
+    box-shadow: inset 0 0 0 4px #f5c518;
+}
+
+.legal-move.hint-target {
+    background-image: radial-gradient(circle, rgba(245, 197, 24, 0.85) 18%, transparent 20%);
+}

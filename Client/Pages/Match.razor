@@ -237,7 +237,7 @@
         <div class="match-body">
             <div class="match-board">
                 <BoardView Board="@CurrentBoard" Selected="@Selected" Highlighted="@Highlighted" OnSquareClicked="@SquareClicked" Flipped="@(MyColor == PlayerColor.Black)"
-                           Rejected="@rejected" RejectedCount="@rejectedCount" />
+                           Rejected="@rejected" RejectedCount="@rejectedCount" Hints="@Hints" />
             </div>
             <section class="move-list" aria-label="Moves">
                 <h2>Moves</h2>

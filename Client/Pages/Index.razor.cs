@@ -21,6 +21,13 @@ namespace Checkers.Client.Pages
 		private Square? rejected;
 		private int rejectedCount;
 
+		// After this many illegal tries in one turn, every legal move is shown as a hint.
+		private const int TriesBeforeHints = 3;
+		private int illegalTries;
+
+		private IReadOnlyCollection<Move> Hints =>
+			game is { IsOver: false } && illegalTries >= TriesBeforeHints ? game.GetLegalMoves() : [];
+
 		private string StatusText => game?.EndReason switch
 		{
 			null => $"{game?.CurrentTurn}'s turn",
@@ -31,6 +38,7 @@ namespace Checkers.Client.Pages
 
 		private void StartGame()
 		{
+			illegalTries = 0;
 			game = new Game();
 			ClearSelection();
 		}
@@ -126,6 +134,9 @@ namespace Checkers.Client.Pages
 				return;
 			}
 
+			// A legal move starts the count again (each hop of a multi-jump counts as one).
+			illegalTries = 0;
+
 			// Keep the jumping piece selected so the player can see where it must jump next.
 			if (game.JumpingPiece is { } next)
 				Select(next);
@@ -149,6 +160,8 @@ namespace Checkers.Client.Pages
 		{
 			rejected = square;
 			rejectedCount++;
+			if (game is { IsOver: false })
+				illegalTries++;
 		}
 
 		private void ClearSelection()

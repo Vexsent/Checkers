@@ -38,6 +38,13 @@ namespace Checkers.Client.Components.Board
 		public bool Flipped { get; set; }
 
 		/// <summary>
+		/// Every move the player could make, shown as a hint (e.g. after repeated illegal tries):
+		/// the pieces that can move are outlined and the squares they can reach are marked.
+		/// </summary>
+		[Parameter]
+		public IReadOnlyCollection<Move> Hints { get; set; } = [];
+
+		/// <summary>
 		/// A square the player just tried to use illegally. It flashes red briefly instead of a message.
 		/// </summary>
 		[Parameter]
@@ -94,6 +101,11 @@ namespace Checkers.Client.Components.Board
 			if (square == Selected) css += " selected-square";
 			if (Highlighted.Contains(square)) css += " legal-move";
 			if (square == _flashing) css += " rejected-square";
+			if (Hints.Count > 0)
+			{
+				if (Hints.Any(m => m.From == square)) css += " hint-piece";
+				if (Hints.Any(m => m.To == square)) css += " hint-target";
+			}
 			return css;
 		}
 
