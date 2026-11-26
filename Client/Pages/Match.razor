@@ -7,7 +7,7 @@
 
 <PageTitle>Play a Match</PageTitle>
 
-<div class="match-page">
+<div class="@(Session is null ? "match-page" : "match-page playing")">
     @if (Session is null)
     {
         <h1>Play a Match</h1>
@@ -174,13 +174,14 @@
             <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
                 @if (Session.Status == SessionStatus.InProgress)
                 {
-                    <RadzenButton Text="Offer draw" ButtonStyle="ButtonStyle.Secondary" Disabled="@(busy || Session.DrawOfferedBy is not null)" Click="@OfferDraw" />
-                    <RadzenButton Text="Resign" ButtonStyle="ButtonStyle.Danger" Disabled="@busy" Click="@Resign" />
+                    <RadzenButton Text="Offer draw" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Secondary" Disabled="@(busy || Session.DrawOfferedBy is not null)" Click="@OfferDraw" />
+                    <RadzenButton Text="Resign" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Disabled="@busy" Click="@Resign" />
                 }
-                <RadzenButton Text="Leave" ButtonStyle="ButtonStyle.Light" Disabled="@busy" Click="@Leave" />
+                <RadzenButton Text="Leave" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Disabled="@busy" Click="@Leave" />
             </RadzenStack>
         </div>
 
+        <div class="match-alerts">
         @if (Sessions.ConnectionState == HubConnectionState.Reconnecting)
         {
             <RadzenAlert AlertStyle="AlertStyle.Warning" AllowClose="false" Shade="Shade.Lighter">Connection lost. Reconnecting…</RadzenAlert>
@@ -213,6 +214,7 @@
         {
             <RadzenAlert AlertStyle="AlertStyle.Info" AllowClose="false" Shade="Shade.Lighter">@drawNotice</RadzenAlert>
         }
+        </div>
 
         <div class="match-body">
             <div class="match-board">
