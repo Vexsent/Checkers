@@ -1,0 +1,70 @@
+@page "/match-history/{MatchId:int}"
+@attribute [Authorize]
+@using Checkers.Client.Components.Board
+
+<PageTitle>Match Replay</PageTitle>
+
+<div class="replay-page">
+    <RadzenLink Path="match-history" Text="Back to match history" />
+
+    @if (loading)
+    {
+        <RadzenProgressBarCircular ProgressBarStyle="ProgressBarStyle.Primary" Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" AriaLabel="loading" />
+    }
+    else if (match is null || replay is null)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Danger" AllowClose="false">
+            This match couldn't be loaded. It may not exist, or the server couldn't be reached.
+        </RadzenAlert>
+    }
+    else
+    {
+        <div class="replay-header">
+            <h1>Match Replay</h1>
+            <div>Black: @match.BlackPlayerName@(match.PlayedAs == "Black" ? " (you)" : "") · White: @match.WhitePlayerName@(match.PlayedAs == "White" ? " (you)" : "")</div>
+            <div>@match.EndedAtUtc.ToLocalTime().ToString("g") · <RadzenBadge BadgeStyle="@OutcomeStyle" Text="@match.Outcome.ToString()" /></div>
+            <div class="replay-rules">@MatchTimeText.DescribeRules(match.Rules, match.TurnTimeLimitSeconds)</div>
+        </div>
+
+        @if (!replay.IsExact)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Warning" AllowClose="false" Shade="Shade.Lighter">
+                Part of this match's saved moves couldn't be replayed, so the replay stops early.
+            </RadzenAlert>
+        }
+
+        <div class="replay-body">
+            <div class="replay-board">
+                <BoardView Board="@CurrentBoard" Selected="@LastLanding" Highlighted="@LastPath" />
+
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" AlignItems="AlignItems.Center" class="replay-controls">
+                    <RadzenButton Icon="first_page" ButtonStyle="ButtonStyle.Light" Disabled="@(step == 0)" Click="@(() => GoTo(0))" aria-label="First move" />
+                    <RadzenButton Icon="chevron_left" ButtonStyle="ButtonStyle.Light" Disabled="@(step == 0)" Click="@(() => GoTo(step - 1))" aria-label="Previous move" />
+                    <span class="replay-step">@StepText</span>
+                    <RadzenButton Icon="chevron_right" ButtonStyle="ButtonStyle.Light" Disabled="@(step == TurnCount)" Click="@(() => GoTo(step + 1))" aria-label="Next move" />
+                    <RadzenButton Icon="last_page" ButtonStyle="ButtonStyle.Light" Disabled="@(step == TurnCount)" Click="@(() => GoTo(TurnCount))" aria-label="Last move" />
+                </RadzenStack>
+            </div>
+
+            <section class="move-list" aria-label="Moves">
+                <h2>Moves</h2>
+                @if (TurnCount == 0)
+                {
+                    <p>No moves were played.</p>
+                }
+                else
+                {
+                    <ol>
+                        @for (var i = 0; i < TurnCount; i++)
+                        {
+                            var number = i + 1;
+                            <li value="@number" class="@(number == step ? "current-move" : null)">
+                                <button type="button" class="move-button" @onclick="@(() => GoTo(number))">@moveTexts[i]</button>
+                            </li>
+                        }
+                    </ol>
+                }
+            </section>
+        </div>
+    }
+</div>

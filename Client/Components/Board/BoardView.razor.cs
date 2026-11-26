@@ -23,7 +23,10 @@ namespace Checkers.Client.Components.Board
 		[Parameter]
 		public IReadOnlyCollection<Square> Highlighted { get; set; } = [];
 
-		private string GridStyle => $"grid-template-columns: repeat({Board.Size}, 1fr);";
+		// minmax(0, 1fr): plain 1fr tracks won't shrink below their content, so a 12×12 board on a
+		// narrow screen would spill past its own width.
+		private string GridStyle =>
+			$"grid-template-columns: repeat({Board.Size}, minmax(0, 1fr)); grid-template-rows: repeat({Board.Size}, minmax(0, 1fr));";
 
 		private string SquareClass(int row, int col)
 		{

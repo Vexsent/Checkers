@@ -14,8 +14,13 @@ namespace Checkers.Application.Core.Sessions
 	{
 		public async Task<RecordMatchResult?> RecordIfFinishedAsync(GameSessionDto session)
 		{
+			// Each side is a person or the computer (saved with no player id); one side must be a person.
+			var blackIsComputer = session.ComputerColor == PlayerColor.Black;
+			var whiteIsComputer = session.ComputerColor == PlayerColor.White;
 			if (session.Status != SessionStatus.Finished
-				|| session.WhitePlayerId is not int whitePlayerId
+				|| (session.BlackPlayerId is null && !blackIsComputer)
+				|| (session.WhitePlayerId is null && !whiteIsComputer)
+				|| (session.BlackPlayerId ?? session.WhitePlayerId) is not int humanId
 				|| session.StartedAtUtc is not DateTime startedAtUtc
 				|| session.EndedAtUtc is not DateTime endedAtUtc
 				|| ToMatchResult(session.Outcome) is not MatchResult result)
@@ -27,7 +32,7 @@ namespace Checkers.Application.Core.Sessions
 			var request = new RecordMatchRequestDto
 			{
 				BlackPlayerId = session.BlackPlayerId,
-				WhitePlayerId = whitePlayerId,
+				WhitePlayerId = session.WhitePlayerId,
 				Result = result,
 				StartedAtUtc = startedAtUtc,
 				EndedAtUtc = endedAtUtc,
@@ -38,9 +43,12 @@ namespace Checkers.Application.Core.Sessions
 					ToRow = m.ToRow,
 					ToCol = m.ToCol,
 				}).ToList(),
+				Rules = session.Rules,
+				TurnTimeLimitSeconds = session.TurnTimeLimitSeconds,
+				ComputerDifficulty = session.ComputerDifficulty,
 			};
 
-			return await matchHistory.RecordMatchAsync(session.BlackPlayerId, request);
+			return await matchHistory.RecordMatchAsync(humanId, request);
 		}
 
 		private static MatchResult? ToMatchResult(GameOutcome outcome) => outcome switch

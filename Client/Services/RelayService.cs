@@ -7,7 +7,8 @@ namespace Checkers.Client.Services
 {
     internal class RelayService : IRelayService
     {
-        private const int BoardSize = 8;
+        /// <inheritdoc />
+        public int BoardSize { get; set; } = 8;
 
         private readonly List<MoveEntry> _moves = new();
 
@@ -15,10 +16,10 @@ namespace Checkers.Client.Services
 
         public event Action? MovesChanged;
 
-        public MoveEntry RecordMove(GamePieces piece, IReadOnlyList<Square> path, bool crowned = false)
+        public MoveEntry RecordMove(GamePieces piece, IReadOnlyList<Square> path, bool crowned = false, bool? isJump = null)
         {
             // Format first so an invalid move throws before anything is added.
-            string text = FormatMove(piece, path, crowned);
+            string text = FormatMove(piece, path, crowned, isJump);
 
             var entry = new MoveEntry(
                 Number: _moves.Count + 1,
@@ -57,14 +58,15 @@ namespace Checkers.Client.Services
             MovesChanged?.Invoke();
         }
 
-        public string FormatMove(GamePieces piece, IReadOnlyList<Square> path, bool crowned = false)
+        public string FormatMove(GamePieces piece, IReadOnlyList<Square> path, bool crowned = false, bool? isJump = null)
         {
             if (path.Count < 2)
                 throw new ArgumentException("A move needs a starting square and at least one landing square.", nameof(path));
 
-            // A normal move covers one row, a jump covers two.
-            bool isJump = Math.Abs(path[1].Row - path[0].Row) == 2;
-            string separator = isJump ? "x" : "-";
+            // Without flying kings a normal move covers one row and a jump two. A flying king can
+            // slide or capture across any distance, so callers that know pass isJump.
+            bool jump = isJump ?? Math.Abs(path[1].Row - path[0].Row) == 2;
+            string separator = jump ? "x" : "-";
 
             string text = $"{PieceLetters(piece)} {SquareName(path[0])}";
             for (int i = 1; i < path.Count; i++)
@@ -73,7 +75,7 @@ namespace Checkers.Client.Services
             }
 
             // Each landing square in a jump is one capture. Only multi-jumps get a count.
-            int captures = isJump ? path.Count - 1 : 0;
+            int captures = jump ? path.Count - 1 : 0;
             if (captures >= 2)
             {
                 text += $" (x{captures})";
@@ -97,7 +99,7 @@ namespace Checkers.Client.Services
         };
 
         // Rows are numbered from white's side, so board row 7 is rank 1.
-        private static string SquareName(Square square)
+        private string SquareName(Square square)
         {
             char file = (char)('a' + square.Col);
             int rank = BoardSize - square.Row;

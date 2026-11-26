@@ -192,6 +192,66 @@ namespace UnitTests.Application.Core.Sessions
 		}
 
 		[Fact]
+		public void GetActiveMatches_ShowsEachPlayerTheirSideOpponentAndTurn()
+		{
+			var code = StartMatch();
+			_manager.MakeMove(code, Black, BlackOpening);
+
+			var forBlack = Assert.Single(_manager.GetActiveMatches(Black));
+			var forWhite = Assert.Single(_manager.GetActiveMatches(White));
+
+			Assert.Equal(code, forBlack.MatchCode);
+			Assert.Equal(SessionStatus.InProgress, forBlack.Status);
+			Assert.Equal("white", forBlack.OpponentName);
+			Assert.Equal("Black", forBlack.PlayedAs);
+			Assert.False(forBlack.IsYourTurn);
+			Assert.Equal(1, forBlack.MoveCount);
+			Assert.NotNull(forBlack.StartedAtUtc);
+
+			Assert.Equal("black", forWhite.OpponentName);
+			Assert.Equal("White", forWhite.PlayedAs);
+			Assert.True(forWhite.IsYourTurn);
+		}
+
+		[Fact]
+		public void GetActiveMatches_IncludesMatchStillWaitingForOpponent_Last()
+		{
+			var waiting = _manager.Create(Black, "black").Session!.MatchCode;
+			var started = StartMatch();
+
+			var active = _manager.GetActiveMatches(Black);
+
+			Assert.Equal([started, waiting], active.Select(m => m.MatchCode));
+			Assert.Null(active[1].OpponentName);
+			Assert.Equal(SessionStatus.WaitingForOpponent, active[1].Status);
+			Assert.False(active[1].IsYourTurn);
+		}
+
+		[Fact]
+		public void GetActiveMatches_ExcludesFinishedAndOtherUsersMatches()
+		{
+			var finished = StartMatch();
+			var active = StartMatch();
+			_manager.Resign(finished, White);
+
+			Assert.Equal([active], _manager.GetActiveMatches(White).Select(m => m.MatchCode));
+			Assert.Empty(_manager.GetActiveMatches(Outsider));
+		}
+
+		[Fact]
+		public void Join_AsExistingPlayer_RejoinsWithTheCurrentState()
+		{
+			var code = StartMatch();
+			_manager.MakeMove(code, Black, BlackOpening);
+
+			var rejoined = _manager.Join(code, White, "white");
+
+			Assert.True(rejoined.Succeeded);
+			Assert.Equal([BlackOpening], rejoined.Session!.Moves);
+			Assert.Equal(PlayerColor.White, rejoined.Session.CurrentPlayer);
+		}
+
+		[Fact]
 		public void OfferDraw_ThenAccept_EndsMatchAsDraw()
 		{
 			var code = StartMatch();
@@ -299,7 +359,7 @@ namespace UnitTests.Application.Core.Sessions
 		/// </summary>
 		private sealed class ScriptedRules(PlayerColor nextPlayer, GameOutcome outcome) : IGameRules
 		{
-			public IRulesGame NewGame() => new ScriptedGame(nextPlayer, outcome);
+			public IRulesGame NewGame(GameRuleOptions rules) => new ScriptedGame(nextPlayer, outcome);
 
 			private sealed class ScriptedGame(PlayerColor nextPlayer, GameOutcome outcome) : IRulesGame
 			{

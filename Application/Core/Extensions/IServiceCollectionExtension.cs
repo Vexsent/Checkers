@@ -102,6 +102,8 @@ namespace Checkers.Application.Core.Extensions
 		public static IServiceCollection AddGameSessions(this IServiceCollection services)
 		{
 			services.AddSingleton<IGameRules, CheckersGameRules>();
+			// Turn time limits read the clock through this, so tests can control time.
+			services.AddSingleton(TimeProvider.System);
 			services.AddSingleton<IGameSessionManager, GameSessionManager>();
 			services.AddScoped<IFinishedMatchRecorder, FinishedMatchRecorder>();
 			return services;

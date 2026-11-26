@@ -28,18 +28,19 @@ namespace Checkers.Shared.GameModels
 		public bool IsOnBoard(Square square) =>
 			square.Row >= 0 && square.Row < Size && square.Col >= 0 && square.Col < Size;
 
-		public static Board CreateStandard(int size = 8)
+		/// <param name="pieceRows">Rows of men per side. Defaults to filling all but the two middle rows.</param>
+		public static Board CreateStandard(int size = 8, int? pieceRows = null)
 		{
 			var board = new Board(size);
 
-			int pieceRows = (size - 2) / 2;
+			int rows = pieceRows ?? (size - 2) / 2;
 
 			for (int r = 0; r < size; r++)
 				for (int c = 0; c < size; c++)
 				{
 					if (!IsPlayable(r, c)) continue;
-					if (r < pieceRows) board._squares[r, c] = GamePieces.BlackPawn;
-					else if (r >= size - pieceRows) board._squares[r, c] = GamePieces.WhitePawn;
+					if (r < rows) board._squares[r, c] = GamePieces.BlackPawn;
+					else if (r >= size - rows) board._squares[r, c] = GamePieces.WhitePawn;
 				}
 
 			return board;

@@ -47,11 +47,19 @@ namespace Checkers.Persistence.Data.Configurations
 
 			builder.Property(p => p.StartedAtUtc)
 				.IsRequired()
-				.HasColumnName("Started_At_Utc");
+				.HasColumnName("Start_At_Utc");
 
 			builder.Property(p => p.EndedAtUtc)
 				.IsRequired()
-				.HasColumnName("Ended_At_Utc");
+				.HasColumnName("End_At_Utc");
+
+			builder.Property(p => p.TurnTimeLimitSeconds)
+				.HasColumnName("Turn_Time_Limit_Seconds");
+
+			// Every rule as JSON, so a saved match replays with the rules it was played with and new
+			// variants don't need new columns.
+			builder.Property(p => p.RulesJson)
+				.HasColumnName("Rules_Json");
 
 			builder.HasMany(m => m.Moves)
 				.WithOne()

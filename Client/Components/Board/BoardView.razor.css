@@ -1,7 +1,8 @@
-/* Scales to the smaller of the viewport's width/height so the board fits phones and desktops. */
+/* Scales to the smaller of the viewport's width/height so the board fits phones and desktops.
+   A page can size it to its own space instead by setting --board-size (the match page does). */
 .board {
     display: grid;
-    width: min(90vw, 80vh);
+    width: var(--board-size, min(90vw, 80vh));
     aspect-ratio: 1 / 1;
     margin: 0 auto;
     border: 2px solid #333;

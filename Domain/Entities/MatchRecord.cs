@@ -16,6 +16,16 @@ namespace Checkers.Domain.Entities
 		public DateTime StartedAtUtc { get; set; }
 		public DateTime EndedAtUtc { get; set; }
 		/// <summary>
+		/// Seconds each player had per turn, or null for no limit.
+		/// </summary>
+		public int? TurnTimeLimitSeconds { get; set; }
+		/// <summary>
+		/// The full rule set as JSON (variant, board size, capture rules...), needed to replay the
+		/// match, plus "ComputerDifficulty" for a match against the computer. Null means standard
+		/// American checkers, which every match before variants was.
+		/// </summary>
+		public string? RulesJson { get; set; }
+		/// <summary>
 		/// Every move in the order it was played, kept so the match can be replayed later.
 		/// </summary>
 		public virtual List<MatchRecordMove> Moves { get; set; } = [];

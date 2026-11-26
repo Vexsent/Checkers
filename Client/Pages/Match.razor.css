@@ -60,3 +60,165 @@
     padding-left: 2rem;
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
 }
+
+.match-rules {
+    margin-top: 0.25rem;
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+.turn-clock {
+    margin-top: 0.25rem;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-weight: 600;
+}
+
+.turn-clock-low {
+    color: var(--rz-danger);
+}
+
+.rule-editor summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.rule-editor[open] summary {
+    margin-bottom: 0.75rem;
+}
+
+/* ---- During a match: everything fits on screen, nothing scrolls but the move list ----
+   The app's body area is a fixed-height grid row, so the page takes exactly that height: a compact
+   header and any alerts at their natural size, and the board area takes whatever is left. The
+   board area is a size container, and the board is the largest square that fits in it, whatever
+   the window and whatever the board size (8x8 to 12x12). */
+.match-page.playing {
+    max-width: none;
+    height: 100%;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    overflow: hidden;
+}
+
+.match-page.playing .match-header {
+    flex: none;
+    margin-bottom: 0;
+    gap: 0.5rem;
+    line-height: 1.35;
+}
+
+.match-page.playing .match-status,
+.match-page.playing .match-rules,
+.match-page.playing .turn-clock {
+    margin-top: 0;
+}
+
+.match-page.playing ::deep .rz-alert {
+    flex: none;
+    margin: 0;
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+}
+
+.match-page.playing .match-body {
+    flex: 1;
+    min-height: 0;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 0.75rem;
+}
+
+.match-page.playing .match-board {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    container-type: size;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    --board-size: min(100cqw, 100cqh);
+}
+
+/* Beside the board on wide screens, scrolling on its own. */
+.match-page.playing .move-list {
+    flex: 0 0 14rem;
+    max-height: none;
+    overflow-y: auto;
+}
+
+/* Tall screens (phones held upright): the move list goes under the board as a short strip. */
+@media (orientation: portrait) {
+    .match-page.playing .match-body {
+        flex-direction: column;
+    }
+
+    .match-page.playing .move-list {
+        flex: 0 0 auto;
+        max-height: 22%;
+    }
+
+    .match-page.playing .move-list h2 {
+        font-size: 1rem;
+        margin-bottom: 0.25rem;
+    }
+}
+
+.match-page.playing .match-alerts {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.match-page.playing .match-alerts:empty {
+    display: none;
+}
+
+/* Short landscape screens (phones held sideways): there isn't the height for a header above the
+   board, so the board takes the left side at full height and the header, alerts and move list
+   stack beside it. */
+@media (orientation: landscape) and (max-height: 600px) {
+    .match-page.playing {
+        display: grid;
+        grid-template-columns: minmax(0, 3fr) minmax(12rem, 2fr);
+        /* Capped, so on the smallest phones a long header or an alert can't push the grid taller
+           than the screen; each scrolls within its own row instead. */
+        grid-template-rows: fit-content(65%) fit-content(25%) minmax(0, 1fr);
+        grid-template-areas:
+            "board header"
+            "board alerts"
+            "board moves";
+        column-gap: 0.75rem;
+        row-gap: 0.5rem;
+    }
+
+    /* The body's own box steps aside so the board and move list sit in the page's grid. */
+    .match-page.playing .match-body {
+        display: contents;
+    }
+
+    .match-page.playing .match-header {
+        grid-area: header;
+        flex-direction: column;
+        flex-wrap: nowrap;
+        font-size: 0.9rem;
+        min-height: 0;
+        overflow-y: auto;
+    }
+
+    .match-page.playing .match-alerts {
+        grid-area: alerts;
+        min-height: 0;
+        overflow-y: auto;
+    }
+
+    .match-page.playing .match-board {
+        grid-area: board;
+    }
+
+    .match-page.playing .move-list {
+        grid-area: moves;
+        min-height: 0;
+    }
+}

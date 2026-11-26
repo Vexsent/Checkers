@@ -37,8 +37,8 @@ namespace Checkers.Client.Services
 			_authStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
 		}
 
-		public Task<string?> CreateMatchAsync() =>
-			InvokeAsync(connection => connection.InvokeAsync<SessionResult>("CreateMatch"));
+		public Task<string?> CreateMatchAsync(MatchSettingsDto settings) =>
+			InvokeAsync(connection => connection.InvokeAsync<SessionResult>("CreateMatch", settings));
 
 		public Task<string?> JoinMatchAsync(string matchCode) =>
 			InvokeAsync(connection => connection.InvokeAsync<SessionResult>("JoinMatch", matchCode.Trim()));

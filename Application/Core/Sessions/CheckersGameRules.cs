@@ -9,7 +9,7 @@ namespace Checkers.Application.Core.Sessions
 	/// </summary>
 	public class CheckersGameRules : IGameRules
 	{
-		public IRulesGame NewGame() => Wrap(new Game());
+		public IRulesGame NewGame(GameRuleOptions rules) => Wrap(new Game(rules));
 
 		/// <summary>
 		/// Wraps a game that is already set up, e.g. a test position.

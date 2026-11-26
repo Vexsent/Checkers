@@ -1,4 +1,5 @@
 using Checkers.Application.Core.MatchHistory;
+using Checkers.Client.Services;
 using Checkers.Application.Core.Repositories;
 using Checkers.Application.Core.Sessions;
 using Checkers.Domain.Entities;
@@ -124,10 +125,172 @@ namespace UnitTests.Application.Core.Sessions
 			Assert.Single(_context.MatchRecords);
 		}
 
-		private (GameSessionManager Manager, FinishedMatchRecorder Recorder, string Code) StartMatch(IGameRules rules)
+		// Store → pull → replay: a whole live game is saved, read back by each player, and replayed
+		// move by move to the exact board the game ended on.
+		[Theory]
+		[InlineData(1, true, false)]
+		[InlineData(7, true, false)]
+		[InlineData(42, true, false)]
+		[InlineData(3, false, true)]
+		[InlineData(11, true, true)]
+		[InlineData(5, false, false)]
+		public async Task FinishedGame_CanBePulledBackAndReplayedToTheFinalBoard(int seed, bool forcedCaptures, bool flyingKings)
+		{
+			var rules = new GameRuleOptions { ForcedCaptures = forcedCaptures, FlyingKings = flyingKings };
+			var (manager, recorder, code) = StartMatch(new CheckersGameRules(), new MatchSettingsDto { Rules = rules, TurnTimeLimitSeconds = 300 });
+			var random = new Random(seed);
+			var shadow = new Game(rules);
+			GameSessionDto session = null!;
+
+			while (!shadow.IsOver)
+			{
+				var legal = shadow.GetLegalMoves();
+				var move = legal[random.Next(legal.Count)];
+				var mover = shadow.CurrentTurn == PlayerColor.Black ? _black.Id : _white.Id;
+				Assert.True(shadow.TryMove(move.From, move.To).Success);
+				var result = manager.MakeMove(code, mover, new GameMove(move.From.Row, move.From.Col, move.To.Row, move.To.Col));
+				Assert.True(result.Succeeded, result.Error);
+				session = result.Session!;
+			}
+
+			Assert.Equal(SessionStatus.Finished, session.Status);
+			var saved = await recorder.RecordIfFinishedAsync(session);
+			Assert.True(saved!.Success);
+			_context.ChangeTracker.Clear();
+
+			foreach (var player in new[] { _black, _white })
+			{
+				var match = await _matchHistory.GetMatchAsync(player.Id, saved.MatchId!.Value);
+				Assert.NotNull(match);
+				Assert.Equal("black", match.BlackPlayerName);
+				Assert.Equal("white", match.WhitePlayerName);
+				Assert.Equal(session.Moves,
+					match.Moves.Select(m => new GameMove(m.FromRow, m.FromCol, m.ToRow, m.ToCol)));
+
+				Assert.Equal(rules, match.Rules);
+				Assert.Equal(300, match.TurnTimeLimitSeconds);
+
+				var replay = SessionReplay.FromMoves(match.Moves.Select(m => new GameMove(m.FromRow, m.FromCol, m.ToRow, m.ToCol)), match.Rules);
+
+				Assert.True(replay.IsExact);
+				Assert.True(replay.Game.IsOver);
+				Assert.Equal(session.Squares, replay.Turns[^1].BoardAfter);
+				Assert.Equal(session.Squares, replay.Game.Board.ToSquares());
+			}
+		}
+
+		// Surrendering from Match History: the player resigns without rejoining, the match leaves both
+		// players' active list, and it's saved as a loss for them and a win for the opponent.
+		[Fact]
+		public async Task SurrenderWithoutRejoining_EndsMatchAndSavesItForBothPlayers()
+		{
+			var (manager, recorder, code) = StartMatch(new CheckersGameRules());
+			manager.MakeMove(code, _black.Id, BlackOpening);
+			Assert.Single(manager.GetActiveMatches(_white.Id));
+
+			var resigned = manager.Resign(code, _white.Id);
+			Assert.True(resigned.Succeeded, resigned.Error);
+			await recorder.RecordIfFinishedAsync(resigned.Session!);
+
+			Assert.Empty(manager.GetActiveMatches(_white.Id));
+			Assert.Empty(manager.GetActiveMatches(_black.Id));
+			Assert.Equal(MatchOutcome.Loss, Assert.Single((await _matchHistory.GetHistoryAsync(_white.Id)).Matches).Outcome);
+			Assert.Equal(MatchOutcome.Win, Assert.Single((await _matchHistory.GetHistoryAsync(_black.Id)).Matches).Outcome);
+		}
+
+		// The creator can sit on white, so the saved record must keep each player on their own side.
+		[Fact]
+		public async Task CreatorPlayingWhite_IsSavedOnTheWhiteSideWithStandardRules()
+		{
+			var manager = new GameSessionManager(new CheckersGameRules());
+			var recorder = new FinishedMatchRecorder(manager, _matchHistory);
+			var code = manager.Create(_white.Id, _white.Username, new MatchSettingsDto { CreatorColor = ColorChoice.White }).Session!.MatchCode;
+			manager.Join(code, _black.Id, _black.Username);
+			manager.MakeMove(code, _black.Id, BlackOpening);
+
+			await recorder.RecordIfFinishedAsync(manager.Resign(code, _white.Id).Session!);
+
+			var saved = await _context.MatchRecords.SingleAsync();
+			Assert.Equal(_black.Id, saved.BlackPlayerId);
+			Assert.Equal(_white.Id, saved.WhitePlayerId);
+			Assert.Equal(MatchResult.BlackWin, saved.Result);
+			Assert.Contains("\"American\"", saved.RulesJson);
+			Assert.Null(saved.TurnTimeLimitSeconds);
+		}
+
+		[Fact]
+		public void SurrenderBeforeOpponentJoins_IsRefused()
+		{
+			var manager = new GameSessionManager(new CheckersGameRules());
+			var code = manager.Create(_black.Id, _black.Username).Session!.MatchCode;
+
+			var result = manager.Resign(code, _black.Id);
+
+			Assert.False(result.Succeeded);
+			Assert.Single(manager.GetActiveMatches(_black.Id));
+		}
+
+		// Each preset: played live, saved, pulled back and replayed with its own rules (board size,
+		// capture rules and all), which have to survive the trip through the rules JSON column.
+		[Theory]
+		[InlineData(GameVariant.Russian)]
+		[InlineData(GameVariant.Pool)]
+		[InlineData(GameVariant.Brazilian)]
+		[InlineData(GameVariant.International)]
+		[InlineData(GameVariant.Canadian)]
+		[InlineData(GameVariant.Spanish)]
+		[InlineData(GameVariant.Italian)]
+		[InlineData(GameVariant.Czech)]
+		[InlineData(GameVariant.Thai)]
+		public async Task PresetGame_IsSavedAndReplaysWithItsRules(GameVariant variant)
+		{
+			var rules = GameVariants.Find(variant)!.Rules;
+			var (manager, recorder, code) = StartMatch(new CheckersGameRules(), new MatchSettingsDto { Rules = rules });
+			var random = new Random(9);
+			var shadow = new Game(rules);
+			GameSessionDto session = null!;
+
+			while (!shadow.IsOver)
+			{
+				var legal = shadow.GetLegalMoves();
+				var move = legal[random.Next(legal.Count)];
+				var mover = shadow.CurrentTurn == PlayerColor.Black ? _black.Id : _white.Id;
+				Assert.True(shadow.TryMove(move.From, move.To).Success);
+				var result = manager.MakeMove(code, mover, new GameMove(move.From.Row, move.From.Col, move.To.Row, move.To.Col));
+				Assert.True(result.Succeeded, result.Error);
+				session = result.Session!;
+			}
+
+			var saved = await recorder.RecordIfFinishedAsync(session);
+			Assert.True(saved!.Success, string.Join(" ", saved.Errors));
+			_context.ChangeTracker.Clear();
+
+			var match = await _matchHistory.GetMatchAsync(_white.Id, saved.MatchId!.Value);
+			Assert.Equal(rules, match!.Rules);
+
+			var replay = SessionReplay.FromMoves(match.Moves.Select(m => new GameMove(m.FromRow, m.FromCol, m.ToRow, m.ToCol)), match.Rules);
+			Assert.True(replay.IsExact);
+			Assert.Equal(session.Squares, replay.Game.Board.ToSquares());
+		}
+
+		[Fact]
+		public async Task FinishedGame_CannotBePulledByAnotherUser()
+		{
+			var (manager, recorder, code) = StartMatch(new CheckersGameRules());
+			manager.MakeMove(code, _black.Id, BlackOpening);
+			var saved = await recorder.RecordIfFinishedAsync(manager.Resign(code, _white.Id).Session!);
+
+			var outsider = NewUser("outsider");
+			_context.Users.Add(outsider);
+			await _context.SaveChangesAsync();
+
+			Assert.Null(await _matchHistory.GetMatchAsync(outsider.Id, saved!.MatchId!.Value));
+		}
+
+		private (GameSessionManager Manager, FinishedMatchRecorder Recorder, string Code) StartMatch(IGameRules rules, MatchSettingsDto? settings = null)
 		{
 			var manager = new GameSessionManager(rules);
-			var code = manager.Create(_black.Id, _black.Username).Session!.MatchCode;
+			var code = manager.Create(_black.Id, _black.Username, settings).Session!.MatchCode;
 			manager.Join(code, _white.Id, _white.Username);
 			return (manager, new FinishedMatchRecorder(manager, _matchHistory), code);
 		}
@@ -146,7 +309,7 @@ namespace UnitTests.Application.Core.Sessions
 		/// </summary>
 		private sealed class ScriptedRules(GameOutcome outcome) : IGameRules
 		{
-			public IRulesGame NewGame() => new ScriptedGame(outcome);
+			public IRulesGame NewGame(GameRuleOptions rules) => new ScriptedGame(outcome);
 
 			private sealed class ScriptedGame(GameOutcome outcome) : IRulesGame
 			{

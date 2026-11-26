@@ -138,3 +138,10 @@ h1:focus {
         padding-left: env(safe-area-inset-left);
     }
 }
+
+/* Short screens (a phone held sideways): give the page the footer's height. */
+@media (max-height: 600px) {
+    .rz-footer {
+        display: none;
+    }
+}

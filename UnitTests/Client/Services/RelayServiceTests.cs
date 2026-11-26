@@ -353,5 +353,25 @@ namespace UnitTests.Client.Services
 		// Stand-in for an entry received from the opponent; only Number and Text matter here.
 		private static MoveEntry Entry(int number, string text) =>
 			new(number, GamePieces.BlackPawn, Path((2, 1), (3, 0)), false, DateTime.UnixEpoch, text);
+
+		[Fact]
+		public void FormatMove_FlyingKingCaptureAcrossThreeRows_IsWrittenAsAJump()
+		{
+			var relay = new RelayService();
+
+			var text = relay.FormatMove(GamePieces.BlackKing, [new Square(0, 1), new Square(3, 4)], isJump: true);
+
+			Assert.Equal("BK b8xe5", text);
+		}
+
+		[Fact]
+		public void FormatMove_FlyingKingSlideOfTwoRows_IsWrittenAsAMove()
+		{
+			var relay = new RelayService();
+
+			var text = relay.FormatMove(GamePieces.WhiteKing, [new Square(4, 3), new Square(2, 1)], isJump: false);
+
+			Assert.Equal("WK d4-b6", text);
+		}
 	}
 }

@@ -10,7 +10,7 @@ namespace UnitTests.Application.Core.Sessions
 		[Fact]
 		public void NewGame_StartsStandardBoardWithBlackToMove()
 		{
-			var game = new CheckersGameRules().NewGame();
+			var game = new CheckersGameRules().NewGame(GameRuleOptions.Standard);
 
 			Assert.Equal(PlayerColor.Black, game.CurrentTurn);
 			Assert.Equal(GameOutcome.InProgress, game.Outcome);
@@ -20,7 +20,7 @@ namespace UnitTests.Application.Core.Sessions
 		[Fact]
 		public void TryMove_LegalStep_MovesPieceAndPassesTurn()
 		{
-			var game = new CheckersGameRules().NewGame();
+			var game = new CheckersGameRules().NewGame(GameRuleOptions.Standard);
 
 			Assert.Null(game.TryMove(new GameMove(2, 1, 3, 0)));
 			Assert.Equal(GamePieces.BlackPawn, game.Board[3, 0]);

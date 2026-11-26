@@ -22,8 +22,23 @@ namespace Checkers.Client.Pages
 		[Inject]
 		private DialogService DialogService { get; set; } = default!;
 
+		[Inject]
+		private NavigationManager Navigation { get; set; } = default!;
+
 		[CascadingParameter]
 		private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+		/// <summary>
+		/// A match to join or rejoin on arrival, e.g. from the Rejoin button in Match History.
+		/// </summary>
+		[SupplyParameterFromQuery(Name = "code")]
+		public string? Code { get; set; }
+
+		/// <summary>
+		/// A game type to preselect on the create screen, e.g. from "Play this variant" on the rules page.
+		/// </summary>
+		[SupplyParameterFromQuery(Name = "variant")]
+		public string? Variant { get; set; }
 
 		private int myUserId;
 		private bool busy;
@@ -32,6 +47,44 @@ namespace Checkers.Client.Pages
 		private Square? selected;
 		private string? drawNotice;
 		private GameSessionDto? lastSession;
+		private Timer? clockTimer;
+
+		// Match settings the creator picks.
+		private ColorChoice creatorColor = ColorChoice.Black;
+		private GameRuleOptions rules = GameRuleOptions.Standard;
+		private bool vsComputer;
+		private ComputerDifficulty computerLevel = ComputerDifficulty.Medium;
+
+		private sealed record LevelChoice(ComputerDifficulty Value, string Text);
+
+		private static readonly LevelChoice[] ComputerLevels =
+		[
+			new(ComputerDifficulty.Beginner, "Beginner: plays any legal move"),
+			new(ComputerDifficulty.Easy, "Easy: looks one turn ahead, often misjudges"),
+			new(ComputerDifficulty.Medium, "Medium: looks three turns ahead"),
+			new(ComputerDifficulty.Hard, "Hard: looks five turns ahead"),
+			new(ComputerDifficulty.Expert, "Expert: thinks as deep as it can"),
+		];
+		private bool useTurnLimit;
+		private int turnLimitAmount = 1;
+		private int turnLimitUnitSeconds = 60 * 60;
+
+		private sealed record TurnLimitUnit(string Name, int Seconds);
+
+		private static readonly TurnLimitUnit[] TurnLimitUnits =
+		[
+			new("seconds", 1),
+			new("minutes", 60),
+			new("hours", 60 * 60),
+			new("days", 24 * 60 * 60),
+		];
+
+		private long TurnLimitSeconds => (long)turnLimitAmount * turnLimitUnitSeconds;
+
+		private string? TurnLimitError => useTurnLimit
+			&& (TurnLimitSeconds < MatchSettingsDto.MinTurnTimeLimitSeconds || TurnLimitSeconds > MatchSettingsDto.MaxTurnTimeLimitSeconds)
+			? MatchSettingsDto.TurnTimeLimitError
+			: null;
 
 		private GameSessionDto? Session => Sessions.Session;
 		private Board CurrentBoard => Board.FromSquares(Session!.BoardSize, Session.Squares);
@@ -52,12 +105,23 @@ namespace Checkers.Client.Pages
 		private string StatusText => Session switch
 		{
 			{ Status: SessionStatus.WaitingForOpponent } => "Waiting for your opponent to join. Share the code above.",
-			{ Status: SessionStatus.InProgress } => IsMyTurn ? "Your turn" : "Opponent's turn",
+			{ Status: SessionStatus.InProgress } => IsMyTurn ? "Your turn"
+				: Session.ComputerColor is not null ? "The computer is thinking…" : "Opponent's turn",
 			{ Outcome: GameOutcome.Draw } => "The game is a draw.",
-			{ Outcome: GameOutcome.BlackWon } => MyColor == PlayerColor.Black ? "You won!" : "You lost.",
-			{ Outcome: GameOutcome.WhiteWon } => MyColor == PlayerColor.White ? "You won!" : "You lost.",
+			{ Outcome: GameOutcome.BlackWon or GameOutcome.WhiteWon } session => EndText(session),
 			_ => string.Empty
 		};
+
+		private string EndText(GameSessionDto session)
+		{
+			var won = (session.Outcome == GameOutcome.BlackWon) == (MyColor == PlayerColor.Black);
+			return session.EndReason switch
+			{
+				GameEndReason.Timeout => won ? "You won! Your opponent ran out of time." : "You lost. You ran out of time.",
+				GameEndReason.Resignation => won ? "You won! Your opponent resigned." : "You lost. You resigned.",
+				_ => won ? "You won!" : "You lost.",
+			};
+		}
 
 		protected override async Task OnInitializedAsync()
 		{
@@ -65,6 +129,33 @@ namespace Checkers.Client.Pages
 			int.TryParse(state.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out myUserId);
 			Sessions.Changed += OnSessionChanged;
 			MoveList.MovesChanged += OnSessionChanged;
+			// Redraws the turn clock once a second while there is one to show.
+			clockTimer = new Timer(_ =>
+			{
+				if (Session is { Status: SessionStatus.InProgress, TurnDeadlineUtc: not null })
+					_ = InvokeAsync(StateHasChanged);
+			}, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+
+			if (Enum.TryParse<GameVariant>(Variant, ignoreCase: true, out var variant) && GameVariants.Find(variant) is { } preset)
+			{
+				rules = preset.Rules;
+				// Drop it from the address so a later visit starts from the default again.
+				if (string.IsNullOrWhiteSpace(Code))
+					Navigation.NavigateTo("match", replace: true);
+			}
+
+			if (!string.IsNullOrWhiteSpace(Code))
+			{
+				var code = Code.Trim();
+				// Drop the code from the address so leaving and coming back doesn't rejoin again.
+				Navigation.NavigateTo("match", replace: true);
+
+				if (!string.Equals(Session?.MatchCode, code, StringComparison.OrdinalIgnoreCase))
+				{
+					joinCode = code;
+					await RunAsync(() => Sessions.JoinMatchAsync(code));
+				}
+			}
 		}
 
 		private void OnSessionChanged() => _ = InvokeAsync(() =>
@@ -109,7 +200,13 @@ namespace Checkers.Client.Pages
 			}
 		}
 
-		private Task CreateMatch() => RunAsync(Sessions.CreateMatchAsync);
+		private Task CreateMatch() => RunAsync(() => Sessions.CreateMatchAsync(new MatchSettingsDto
+		{
+			CreatorColor = creatorColor,
+			Rules = rules,
+			TurnTimeLimitSeconds = useTurnLimit ? (int)TurnLimitSeconds : null,
+			Computer = vsComputer ? computerLevel : null,
+		}));
 
 		private Task JoinMatch() => RunAsync(() => Sessions.JoinMatchAsync(joinCode));
 
@@ -175,6 +272,7 @@ namespace Checkers.Client.Pages
 
 		public void Dispose()
 		{
+			clockTimer?.Dispose();
 			Sessions.Changed -= OnSessionChanged;
 			MoveList.MovesChanged -= OnSessionChanged;
 		}

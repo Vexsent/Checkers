@@ -113,9 +113,53 @@ namespace UnitTests.Application.Core.Repositories
 			Assert.Equal(5, stored.Moves.Single(m => m.MoveNumber == 2).FromRow);
 		}
 
-		private async Task<MatchRecord> SaveMatchAsync(int? blackId, int? whiteId, int minutesAfterStart)
+		[Fact]
+		public async Task GetByIdWithMovesAsync_LoadsPlayersAndMovesInPlayOrder()
 		{
-			var match = NewMatch(blackId, whiteId, minutesAfterStart);
+			var match = NewMatch(_alice.Id, _bob.Id, minutesAfterStart: 10);
+			// Added out of order so the test proves the query sorts them, not the insert order.
+			match.Moves =
+			[
+				new() { MoveNumber = 3, FromRow = 3, FromCol = 0, ToRow = 4, ToCol = 1 },
+				new() { MoveNumber = 1, FromRow = 2, FromCol = 1, ToRow = 3, ToCol = 0 },
+				new() { MoveNumber = 2, FromRow = 5, FromCol = 2, ToRow = 4, ToCol = 3 },
+			];
+			await SaveMatchAsync(match);
+
+			var loaded = await _sut.GetByIdWithMovesAsync(match.Id);
+
+			Assert.NotNull(loaded);
+			Assert.Equal("alice", loaded.BlackPlayer?.Username);
+			Assert.Equal("bob", loaded.WhitePlayer?.Username);
+			Assert.Equal([1, 2, 3], loaded.Moves.Select(m => m.MoveNumber));
+			Assert.Equal(5, loaded.Moves[1].FromRow);
+		}
+
+		[Fact]
+		public async Task GetByIdWithMovesAsync_UnknownId_ReturnsNull()
+		{
+			await SaveMatchAsync(_alice.Id, _bob.Id, minutesAfterStart: 10);
+
+			Assert.Null(await _sut.GetByIdWithMovesAsync(9999));
+		}
+
+		[Fact]
+		public async Task GetByIdWithMovesAsync_AgainstComputer_LeavesThatPlayerNull()
+		{
+			var match = await SaveMatchAsync(null, _carol.Id, minutesAfterStart: 10);
+
+			var loaded = await _sut.GetByIdWithMovesAsync(match.Id);
+
+			Assert.Null(loaded!.BlackPlayer);
+			Assert.Equal("carol", loaded.WhitePlayer?.Username);
+			Assert.Empty(loaded.Moves);
+		}
+
+		private async Task<MatchRecord> SaveMatchAsync(int? blackId, int? whiteId, int minutesAfterStart) =>
+			await SaveMatchAsync(NewMatch(blackId, whiteId, minutesAfterStart));
+
+		private async Task<MatchRecord> SaveMatchAsync(MatchRecord match)
+		{
 			await _sut.AddAsync(match);
 			await _sut.SaveChangesAsync();
 			_context.ChangeTracker.Clear();
