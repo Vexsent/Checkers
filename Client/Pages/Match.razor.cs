@@ -49,6 +49,18 @@ namespace Checkers.Client.Pages
 		private GameSessionDto? lastSession;
 		private Timer? clockTimer;
 
+		// The last square the player tried to use illegally; the board flashes it red.
+		private Square? rejected;
+		private int rejectedCount;
+
+		// Refusals that mean "not a legal move here", shown as a red square rather than a message.
+		// Anything else (a lost connection, a timed-out turn) still shows as an alert.
+		private static readonly HashSet<string> IllegalMoveErrors =
+		[
+			Game.NotYourTurnError, Game.OccupiedError, Game.MustJumpError, Game.ContinueJumpError,
+			Game.BetterCaptureError, Game.IllegalMoveError, Game.NoPieceError, Game.OffBoardError,
+		];
+
 		// Match settings the creator picks.
 		private ColorChoice creatorColor = ColorChoice.Black;
 		private GameRuleOptions rules = GameRuleOptions.Standard;
@@ -261,29 +273,61 @@ namespace Checkers.Client.Pages
 			if (busy || Session is not { Status: SessionStatus.InProgress })
 				return;
 
+			var clicked = new Square(square.Row, square.Col);
 			if (!IsMyTurn)
 			{
-				error = Game.NotYourTurnError;
+				Reject(clicked);
 				return;
 			}
 
 			error = null;
 
-			var clicked = new Square(square.Row, square.Col);
 			var midJump = Sessions.Replay?.Game.JumpingPiece is not null;
 			if (Board.BelongsTo(CurrentBoard[clicked], MyColor))
 			{
-				if (!midJump)
+				// Partway through a multi-jump only the jumping piece may move.
+				if (midJump && clicked != Selected)
+					Reject(clicked);
+				else if (!midJump)
 					selected = selected == clicked ? null : clicked;
 
 				return;
 			}
 
 			if (Selected is not { } from)
+			{
+				Reject(clicked);
 				return;
+			}
+
+			// The rules engine already knows the legal moves, so an illegal one is caught here,
+			// without a trip to the server. The piece stays selected for another try.
+			if (Sessions.Replay is not null && !Highlighted.Contains(clicked))
+			{
+				Reject(clicked);
+				return;
+			}
 
 			selected = null;
-			await RunAsync(() => Sessions.MakeMoveAsync(new GameMove(from.Row, from.Col, clicked.Row, clicked.Col)));
+			busy = true;
+			try
+			{
+				var refused = await Sessions.MakeMoveAsync(new GameMove(from.Row, from.Col, clicked.Row, clicked.Col));
+				if (refused is not null && IllegalMoveErrors.Contains(refused))
+					Reject(clicked);
+				else
+					error = refused;
+			}
+			finally
+			{
+				busy = false;
+			}
+		}
+
+		private void Reject(Square square)
+		{
+			rejected = square;
+			rejectedCount++;
 		}
 
 		public void Dispose()

@@ -17,6 +17,10 @@ namespace Checkers.Client.Pages
 		private Square? selected;
 		private IReadOnlyCollection<Square> highlighted = [];
 
+		// The last square a player tried to use illegally; the board flashes it red instead of a message.
+		private Square? rejected;
+		private int rejectedCount;
+
 		private string StatusText => game?.EndReason switch
 		{
 			null => $"{game?.CurrentTurn}'s turn",
@@ -89,20 +93,20 @@ namespace Checkers.Client.Pages
 		private void SquareClicked((int Row, int Col) cell)
 		{
 			if (game is null) return;
+			var square = new Square(cell.Row, cell.Col);
 			if (game.IsOver)
 			{
-				NotifyError(Game.GameOverError);
+				Reject(square);
 				return;
 			}
 
-			var square = new Square(cell.Row, cell.Col);
 			var owner = Game.OwnerOf(game.Board[square]);
 
 			// Clicking one of your own pieces selects it, unless another piece is partway through a multi-jump.
 			if (owner == game.CurrentTurn)
 			{
 				if (game.JumpingPiece is { } jumper && jumper != square)
-					NotifyError(Game.ContinueJumpError);
+					Reject(square);
 				else
 					Select(square);
 				return;
@@ -110,14 +114,15 @@ namespace Checkers.Client.Pages
 
 			if (selected is null)
 			{
-				NotifyError(owner is null ? Game.NoPieceError : Game.NotYourTurnError);
+				Reject(square);
 				return;
 			}
 
+			// A refused move leaves the piece selected for another try.
 			var result = game.TryMove(selected.Value, square);
 			if (!result.Success)
 			{
-				NotifyError(result.Error!);
+				Reject(square);
 				return;
 			}
 
@@ -135,8 +140,15 @@ namespace Checkers.Client.Pages
 			selected = square;
 			highlighted = game!.GetLegalMoves(square).Select(m => m.To).ToList();
 
+			// A piece that can't move while a capture is required elsewhere.
 			if (highlighted.Count == 0 && game.GetLegalMoves().Any(m => m.IsJump))
-				NotifyError(Game.MustJumpError);
+				Reject(square);
+		}
+
+		private void Reject(Square square)
+		{
+			rejected = square;
+			rejectedCount++;
 		}
 
 		private void ClearSelection()
