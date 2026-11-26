@@ -22,8 +22,17 @@ namespace Checkers.Client.Pages
 		[Inject]
 		private DialogService DialogService { get; set; } = default!;
 
+		[Inject]
+		private NavigationManager Navigation { get; set; } = default!;
+
 		[CascadingParameter]
 		private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+		/// <summary>
+		/// A match to join or rejoin on arrival, e.g. from the Rejoin button in Match History.
+		/// </summary>
+		[SupplyParameterFromQuery(Name = "code")]
+		public string? Code { get; set; }
 
 		private int myUserId;
 		private bool busy;
@@ -65,6 +74,19 @@ namespace Checkers.Client.Pages
 			int.TryParse(state.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out myUserId);
 			Sessions.Changed += OnSessionChanged;
 			MoveList.MovesChanged += OnSessionChanged;
+
+			if (!string.IsNullOrWhiteSpace(Code))
+			{
+				var code = Code.Trim();
+				// Drop the code from the address so leaving and coming back doesn't rejoin again.
+				Navigation.NavigateTo("match", replace: true);
+
+				if (!string.Equals(Session?.MatchCode, code, StringComparison.OrdinalIgnoreCase))
+				{
+					joinCode = code;
+					await RunAsync(() => Sessions.JoinMatchAsync(code));
+				}
+			}
 		}
 
 		private void OnSessionChanged() => _ = InvokeAsync(() =>

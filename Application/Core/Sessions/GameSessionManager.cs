@@ -107,19 +107,38 @@ namespace Checkers.Application.Core.Sessions
 				return SessionResult.Success(match.ToDto());
 			});
 
-		public IReadOnlyList<string> GetActiveMatchCodes(int userId)
+		public IReadOnlyList<string> GetActiveMatchCodes(int userId) =>
+			GetActiveMatches(userId).Select(m => m.MatchCode).ToList();
+
+		public IReadOnlyList<ActiveMatchDto> GetActiveMatches(int userId)
 		{
-			var codes = new List<string>();
+			var active = new List<ActiveMatchDto>();
 			foreach (var match in _matches.Values)
 			{
 				lock (match)
 				{
-					if (match.Status != SessionStatus.Finished && match.HasPlayer(userId))
-						codes.Add(match.Code);
+					if (match.Status == SessionStatus.Finished || !match.HasPlayer(userId))
+						continue;
+
+					var color = match.ColorOf(userId);
+					active.Add(new ActiveMatchDto
+					{
+						MatchCode = match.Code,
+						Status = match.Status,
+						OpponentName = color == PlayerColor.Black ? match.WhitePlayerName : match.BlackPlayerName,
+						PlayedAs = color.ToString(),
+						IsYourTurn = match.Status == SessionStatus.InProgress && match.CurrentPlayer == color,
+						MoveCount = match.Moves.Count,
+						StartedAtUtc = match.StartedAtUtc,
+					});
 				}
 			}
 
-			return codes;
+			// Null start times (still waiting) sort last.
+			return active
+				.OrderByDescending(m => m.StartedAtUtc.HasValue)
+				.ThenByDescending(m => m.StartedAtUtc)
+				.ToList();
 		}
 
 		public bool TryClaimRecording(string matchCode)

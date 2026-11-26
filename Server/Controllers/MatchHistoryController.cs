@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Checkers.Application.Core.Services;
+using Checkers.Server.Hubs;
 using Checkers.Shared.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,8 +10,41 @@ namespace Checkers.Server.Controllers
 	[ApiController]
 	[Authorize]
 	[Route("api/match-history")]
-	public class MatchHistoryController(IMatchHistoryService matchHistoryService) : ControllerBase
+	public class MatchHistoryController(
+		IMatchHistoryService matchHistoryService,
+		IGameSessionManager sessions,
+		SessionBroadcaster broadcaster) : ControllerBase
 	{
+		/// <summary>
+		/// The signed-in user's unfinished live matches, so they can rejoin one they dropped or left.
+		/// </summary>
+		[HttpGet("active")]
+		public IActionResult GetActiveMatches()
+		{
+			if (!TryGetUserId(out var userId))
+				return Unauthorized();
+
+			return Ok(sessions.GetActiveMatches(userId));
+		}
+
+		/// <summary>
+		/// Resigns one of the signed-in user's live matches without rejoining it. The opponent wins,
+		/// the match is saved to both players' history, and the opponent sees it end straight away.
+		/// </summary>
+		[HttpPost("active/{matchCode}/resign")]
+		public async Task<IActionResult> ResignActiveMatch(string matchCode)
+		{
+			if (!TryGetUserId(out var userId))
+				return Unauthorized();
+
+			var result = sessions.Resign(matchCode, userId);
+			if (result.Session is not { } session)
+				return BadRequest(new[] { result.Error });
+
+			await broadcaster.PublishAsync(session);
+			return Ok(session);
+		}
+
 		/// <summary>
 		/// The signed-in user's match history. The user comes from the JWT, never the request,
 		/// so nobody can read someone else's history.

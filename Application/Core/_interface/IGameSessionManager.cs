@@ -28,6 +28,11 @@ namespace Checkers.Application.Core.Services
 		/// </summary>
 		IReadOnlyList<string> GetActiveMatchCodes(int userId);
 		/// <summary>
+		/// The unfinished matches the user is playing in, from their side, most recently started
+		/// first, with matches still waiting for an opponent at the end.
+		/// </summary>
+		IReadOnlyList<ActiveMatchDto> GetActiveMatches(int userId);
+		/// <summary>
 		/// True the first time it's called for a finished match and false after that, so a match
 		/// that both players finish at once is still saved only once.
 		/// </summary>

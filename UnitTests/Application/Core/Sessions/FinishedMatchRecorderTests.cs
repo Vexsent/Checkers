@@ -172,6 +172,37 @@ namespace UnitTests.Application.Core.Sessions
 			}
 		}
 
+		// Surrendering from Match History: the player resigns without rejoining, the match leaves both
+		// players' active list, and it's saved as a loss for them and a win for the opponent.
+		[Fact]
+		public async Task SurrenderWithoutRejoining_EndsMatchAndSavesItForBothPlayers()
+		{
+			var (manager, recorder, code) = StartMatch(new CheckersGameRules());
+			manager.MakeMove(code, _black.Id, BlackOpening);
+			Assert.Single(manager.GetActiveMatches(_white.Id));
+
+			var resigned = manager.Resign(code, _white.Id);
+			Assert.True(resigned.Succeeded, resigned.Error);
+			await recorder.RecordIfFinishedAsync(resigned.Session!);
+
+			Assert.Empty(manager.GetActiveMatches(_white.Id));
+			Assert.Empty(manager.GetActiveMatches(_black.Id));
+			Assert.Equal(MatchOutcome.Loss, Assert.Single((await _matchHistory.GetHistoryAsync(_white.Id)).Matches).Outcome);
+			Assert.Equal(MatchOutcome.Win, Assert.Single((await _matchHistory.GetHistoryAsync(_black.Id)).Matches).Outcome);
+		}
+
+		[Fact]
+		public void SurrenderBeforeOpponentJoins_IsRefused()
+		{
+			var manager = new GameSessionManager(new CheckersGameRules());
+			var code = manager.Create(_black.Id, _black.Username).Session!.MatchCode;
+
+			var result = manager.Resign(code, _black.Id);
+
+			Assert.False(result.Succeeded);
+			Assert.Single(manager.GetActiveMatches(_black.Id));
+		}
+
 		[Fact]
 		public async Task FinishedGame_CannotBePulledByAnotherUser()
 		{

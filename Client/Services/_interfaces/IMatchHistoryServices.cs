@@ -13,5 +13,13 @@ namespace Checkers.Client.Services
 		/// theirs, or the Server couldn't be reached.
 		/// </summary>
 		Task<MatchReplayDto?> GetMatchAsync(int matchId);
+		/// <summary>
+		/// The signed-in user's unfinished live matches, or null if the Server couldn't be reached.
+		/// </summary>
+		Task<List<ActiveMatchDto>?> GetActiveMatchesAsync();
+		/// <summary>
+		/// Resigns a live match without rejoining it. Returns an error message, or null on success.
+		/// </summary>
+		Task<string?> ResignActiveMatchAsync(string matchCode);
 	}
 }

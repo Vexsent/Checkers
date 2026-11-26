@@ -1,10 +1,47 @@
 @page "/match-history"
 @attribute [Authorize]
+@using Checkers.Shared.Enums
 
 <PageTitle>Match History</PageTitle>
 
 <RadzenStack Gap="1rem" Style="padding: 1rem;">
     <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H1">Match History</RadzenText>
+
+    @if (activeMatches is { Count: > 0 })
+    {
+        <RadzenCard Variant="Variant.Outlined">
+            <RadzenStack Gap="0.75rem">
+                <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H2">Active matches</RadzenText>
+                @foreach (var active in activeMatches)
+                {
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap" Gap="0.5rem">
+                        <RadzenStack Gap="0">
+                            <RadzenText TextStyle="TextStyle.Body1" Style="margin: 0;">
+                                <strong>@(active.OpponentName is null ? "Waiting for an opponent" : $"vs {active.OpponentName}")</strong>
+                                · playing @active.PlayedAs · code @active.MatchCode
+                            </RadzenText>
+                            <RadzenText TextStyle="TextStyle.Caption" Style="margin: 0;">@ActiveStatus(active)</RadzenText>
+                        </RadzenStack>
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                            <RadzenButton Text="Rejoin" Icon="login" Size="ButtonSize.Small" Disabled="@busy"
+                                          ButtonStyle="@(active.IsYourTurn ? ButtonStyle.Primary : ButtonStyle.Secondary)"
+                                          Click="@(() => Rejoin(active))" />
+                            @if (active.Status == SessionStatus.InProgress)
+                            {
+                                <RadzenButton Text="Surrender" Icon="flag" Size="ButtonSize.Small" Disabled="@busy"
+                                              ButtonStyle="ButtonStyle.Danger" Variant="Variant.Outlined"
+                                              Click="@(() => Surrender(active))" />
+                            }
+                        </RadzenStack>
+                    </RadzenStack>
+                }
+                @if (activeError is not null)
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Danger" AllowClose="false" Shade="Shade.Lighter">@activeError</RadzenAlert>
+                }
+            </RadzenStack>
+        </RadzenCard>
+    }
 
     @if (loading)
     {

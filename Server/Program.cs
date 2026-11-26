@@ -85,6 +85,7 @@ builder.Services.AddRepositories();
 
 //Live match sessions
 builder.Services.AddSignalR();
+builder.Services.AddScoped<SessionBroadcaster>();
 builder.Services.AddGameSessions();
 
 //Health check for Docker / the reverse proxy
