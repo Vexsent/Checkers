@@ -23,6 +23,13 @@ namespace Checkers.Client.Components.Board
 		[Parameter]
 		public IReadOnlyCollection<Square> Highlighted { get; set; } = [];
 
+		/// <summary>
+		/// Turns the board round 180° so Black's pieces sit at the bottom, for a player playing Black.
+		/// Only the picture turns: squares, clicks and highlights all use real board coordinates.
+		/// </summary>
+		[Parameter]
+		public bool Flipped { get; set; }
+
 		// minmax(0, 1fr): plain 1fr tracks won't shrink below their content, so a 12×12 board on a
 		// narrow screen would spill past its own width.
 		private string GridStyle =>

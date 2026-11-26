@@ -5,7 +5,10 @@
     {
         for (int c = 0; c < Board.Size; c++)
         {
-            int row = r, col = c;
+            // Screen position (r, c) shows board square (row, col): the same square, or the one
+            // opposite it when the board is turned round for the Black player.
+            int row = Flipped ? Board.Size - 1 - r : r;
+            int col = Flipped ? Board.Size - 1 - c : c;
             var image = PieceImages.For(Board[row, col]);
             <div class="@SquareClass(row, col)" @onclick="() => SquareClicked(row, col)">
                 @if (image is not null)
