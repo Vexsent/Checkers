@@ -1,0 +1,108 @@
+@page "/match"
+@attribute [Authorize]
+@using Checkers.Client.Components.Board
+@using Checkers.Shared.Enums
+@using Microsoft.AspNetCore.SignalR.Client
+@implements IDisposable
+
+<PageTitle>Play a Match</PageTitle>
+
+<div class="match-page">
+    @if (Session is null)
+    {
+        <h1>Play a Match</h1>
+        <RadzenStack Gap="1.5rem">
+            <RadzenStack Gap="0.5rem">
+                <p>Start a match and share its code with your opponent.</p>
+                <RadzenButton Text="Create match" Icon="add" Disabled="@busy" Click="@CreateMatch" />
+            </RadzenStack>
+            <RadzenStack Gap="0.5rem">
+                <p>Or enter the code your opponent gave you.</p>
+                <RadzenTextBox @bind-Value="@joinCode" Immediate="true" Placeholder="Match code" MaxLength="6" aria-label="Match code" />
+                <RadzenButton Text="Join match" Icon="login" ButtonStyle="ButtonStyle.Secondary" Disabled="@(busy || string.IsNullOrWhiteSpace(joinCode))" Click="@JoinMatch" />
+            </RadzenStack>
+        </RadzenStack>
+    }
+    else
+    {
+        <div class="match-header">
+            <div>
+                <div class="match-code">Match code: <strong>@Session.MatchCode</strong></div>
+                <div>Black: @Session.BlackPlayerName@(MyColor == PlayerColor.Black ? " (you)" : "") · White: @(Session.WhitePlayerName ?? "waiting…")@(MyColor == PlayerColor.White && Session.WhitePlayerId is not null ? " (you)" : "")</div>
+                <div class="match-status">@StatusText</div>
+                @if (Session.Status == SessionStatus.Finished)
+                {
+                    <RadzenLink Path="match-history" Text="See this game in your match history" />
+                }
+            </div>
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                @if (Session.Status == SessionStatus.InProgress)
+                {
+                    <RadzenButton Text="Offer draw" ButtonStyle="ButtonStyle.Secondary" Disabled="@(busy || Session.DrawOfferedBy is not null)" Click="@OfferDraw" />
+                    <RadzenButton Text="Resign" ButtonStyle="ButtonStyle.Danger" Disabled="@busy" Click="@Resign" />
+                }
+                <RadzenButton Text="Leave" ButtonStyle="ButtonStyle.Light" Disabled="@busy" Click="@Leave" />
+            </RadzenStack>
+        </div>
+
+        @if (Sessions.ConnectionState == HubConnectionState.Reconnecting)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Warning" AllowClose="false" Shade="Shade.Lighter">Connection lost. Reconnecting…</RadzenAlert>
+        }
+        else if (Sessions.ConnectionState == HubConnectionState.Disconnected)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Danger" AllowClose="false" Shade="Shade.Lighter">
+                Disconnected from the game server.
+                <RadzenButton Text="Rejoin" Size="ButtonSize.Small" Disabled="@busy" Click="@Rejoin" />
+            </RadzenAlert>
+        }
+        else if (!Sessions.IsOpponentConnected && Session.Status == SessionStatus.InProgress)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Warning" AllowClose="false" Shade="Shade.Lighter">Your opponent has disconnected.</RadzenAlert>
+        }
+
+        @if (Session.Status == SessionStatus.InProgress && OpponentOfferedDraw)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Info" AllowClose="false" Shade="Shade.Lighter">
+                Your opponent offers a draw.
+                <RadzenButton Text="Accept" Size="ButtonSize.Small" Disabled="@busy" Click="@(() => AnswerDraw(true))" />
+                <RadzenButton Text="Decline" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Disabled="@busy" Click="@(() => AnswerDraw(false))" />
+            </RadzenAlert>
+        }
+        else if (Session.Status == SessionStatus.InProgress && IOfferedDraw)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Info" AllowClose="false" Shade="Shade.Lighter">Draw offered. Waiting for your opponent to answer.</RadzenAlert>
+        }
+        else if (Session.Status == SessionStatus.InProgress && drawNotice is not null)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Info" AllowClose="false" Shade="Shade.Lighter">@drawNotice</RadzenAlert>
+        }
+
+        <div class="match-body">
+            <div class="match-board">
+                <BoardView Board="@CurrentBoard" Selected="@Selected" Highlighted="@Highlighted" OnSquareClicked="@SquareClicked" />
+            </div>
+            <section class="move-list" aria-label="Moves">
+                <h2>Moves</h2>
+                @if (MoveList.Moves.Count == 0)
+                {
+                    <p>No moves yet.</p>
+                }
+                else
+                {
+                    <ol>
+                        @foreach (var entry in MoveList.Moves)
+                        {
+                            <li value="@entry.Number">@entry.Text</li>
+                        }
+                    </ol>
+                }
+            </section>
+        </div>
+    }
+
+    @if (error is not null)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Danger" AllowClose="false" Shade="Shade.Lighter">@error</RadzenAlert>
+    }
+</div>

@@ -15,10 +15,24 @@ namespace Checkers.Client.Components.Board
 		[Parameter]
 		public EventCallback<(int Row, int Col)> OnSquareClicked { get; set; }
 
+		/// <summary>The square of the piece the player has selected, if any.</summary>
+		[Parameter]
+		public Square? Selected { get; set; }
+
+		/// <summary>Squares the selected piece can legally move to.</summary>
+		[Parameter]
+		public IReadOnlyCollection<Square> Highlighted { get; set; } = [];
+
 		private string GridStyle => $"grid-template-columns: repeat({Board.Size}, 1fr);";
 
-		private static string SquareClass(int row, int col) =>
-			Checkers.Shared.GameModels.Board.IsPlayable(row, col) ? "square dark-square" : "square light-square";
+		private string SquareClass(int row, int col)
+		{
+			var square = new Square(row, col);
+			var css = Checkers.Shared.GameModels.Board.IsPlayable(row, col) ? "square dark-square" : "square light-square";
+			if (square == Selected) css += " selected-square";
+			if (Highlighted.Contains(square)) css += " legal-move";
+			return css;
+		}
 
 		private Task SquareClicked(int row, int col) => OnSquareClicked.InvokeAsync((row, col));
 	}

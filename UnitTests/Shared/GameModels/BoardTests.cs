@@ -85,6 +85,36 @@ namespace UnitTests.Shared.GameModels
 			Assert.Equal(20, Pieces(board).Count(p => p.Piece == GamePieces.WhitePawn));
 		}
 
+		[Fact]
+		public void FromSquares_RestoresBoardFromToSquares()
+		{
+			var board = Board.CreateStandard();
+
+			var restored = Board.FromSquares(board.Size, board.ToSquares());
+
+			Assert.Equal(Pieces(board), Pieces(restored));
+		}
+
+		[Fact]
+		public void FromSquares_WrongSquareCount_Throws()
+		{
+			Assert.Throws<ArgumentException>(() => Board.FromSquares(8, new GamePieces[63]));
+		}
+
+		[Theory]
+		[InlineData(GamePieces.BlackPawn, PlayerColor.Black, true)]
+		[InlineData(GamePieces.BlackKing, PlayerColor.Black, true)]
+		[InlineData(GamePieces.WhitePawn, PlayerColor.White, true)]
+		[InlineData(GamePieces.WhiteKing, PlayerColor.White, true)]
+		[InlineData(GamePieces.WhitePawn, PlayerColor.Black, false)]
+		[InlineData(GamePieces.BlackKing, PlayerColor.White, false)]
+		[InlineData(GamePieces.Empty, PlayerColor.Black, false)]
+		[InlineData(GamePieces.Empty, PlayerColor.White, false)]
+		public void BelongsTo_MatchesPieceToItsColor(GamePieces piece, PlayerColor color, bool expected)
+		{
+			Assert.Equal(expected, Board.BelongsTo(piece, color));
+		}
+
 		private static List<(int Row, int Col, GamePieces Piece)> Pieces(Board board)
 		{
 			var pieces = new List<(int, int, GamePieces)>();

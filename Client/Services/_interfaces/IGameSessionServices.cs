@@ -1,0 +1,33 @@
+using Checkers.Shared.DTOs;
+using Checkers.Shared.GameModels;
+using Microsoft.AspNetCore.SignalR.Client;
+
+namespace Checkers.Client.Services
+{
+	public interface IGameSessionServices
+	{
+		/// <summary>The match being played, or null when there isn't one.</summary>
+		GameSessionDto? Session { get; }
+		/// <summary>The match replayed through the rules engine, for legal moves and multi-jumps. Null with <see cref="Session"/>.</summary>
+		SessionReplay? Replay { get; }
+		bool IsOpponentConnected { get; }
+		HubConnectionState ConnectionState { get; }
+		/// <summary>Raised off the UI thread whenever any of the above changes.</summary>
+		event Action? Changed;
+
+		/// <summary>Starts a match. Returns an error message, or null on success.</summary>
+		Task<string?> CreateMatchAsync();
+		/// <summary>Joins or rejoins a match. Returns an error message, or null on success.</summary>
+		Task<string?> JoinMatchAsync(string matchCode);
+		/// <summary>Plays one step of a turn. Returns an error message, or null on success.</summary>
+		Task<string?> MakeMoveAsync(GameMove move);
+		/// <summary>Resigns the match. Returns an error message, or null on success.</summary>
+		Task<string?> ResignAsync();
+		/// <summary>Offers the opponent a draw. Returns an error message, or null on success.</summary>
+		Task<string?> OfferDrawAsync();
+		/// <summary>Accepts or declines the opponent's draw offer. Returns an error message, or null on success.</summary>
+		Task<string?> AnswerDrawAsync(bool accept);
+		/// <summary>Stops following the match on this device. A player can rejoin it with its code.</summary>
+		Task LeaveAsync();
+	}
+}
