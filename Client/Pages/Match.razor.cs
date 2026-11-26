@@ -34,6 +34,12 @@ namespace Checkers.Client.Pages
 		[SupplyParameterFromQuery(Name = "code")]
 		public string? Code { get; set; }
 
+		/// <summary>
+		/// A game type to preselect on the create screen, e.g. from "Play this variant" on the rules page.
+		/// </summary>
+		[SupplyParameterFromQuery(Name = "variant")]
+		public string? Variant { get; set; }
+
 		private int myUserId;
 		private bool busy;
 		private string joinCode = string.Empty;
@@ -115,6 +121,14 @@ namespace Checkers.Client.Pages
 				if (Session is { Status: SessionStatus.InProgress, TurnDeadlineUtc: not null })
 					_ = InvokeAsync(StateHasChanged);
 			}, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+
+			if (Enum.TryParse<GameVariant>(Variant, ignoreCase: true, out var variant) && GameVariants.Find(variant) is { } preset)
+			{
+				rules = preset.Rules;
+				// Drop it from the address so a later visit starts from the default again.
+				if (string.IsNullOrWhiteSpace(Code))
+					Navigation.NavigateTo("match", replace: true);
+			}
 
 			if (!string.IsNullOrWhiteSpace(Code))
 			{

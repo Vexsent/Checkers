@@ -20,7 +20,7 @@
                             <RadzenLabel Text="Game type" Component="game-type" />
                             <RadzenDropDown @bind-Value="@SelectedVariant" TValue="GameVariant" Data="@VariantChoices" Name="game-type"
                                             TextProperty="@nameof(VariantChoice.Name)" ValueProperty="@nameof(VariantChoice.Variant)" Style="max-width: 22rem;" />
-                            <RadzenText TextStyle="TextStyle.Caption">@VariantDescription</RadzenText>
+                            <RadzenText TextStyle="TextStyle.Caption">@VariantDescription <RadzenLink Path="rules" Text="What do these rules mean?" /></RadzenText>
                         </RadzenStack>
 
                         <RadzenStack Gap="0.25rem">
