@@ -41,6 +41,15 @@ namespace Checkers.Application.Core.Sessions
 			};
 			match.Seat(creatorColor, userId, username);
 
+			// Against the computer there's no one to wait for: it takes the other side and play starts.
+			if (settings.Computer is { } level)
+			{
+				match.SeatComputer(Game.Opponent(creatorColor), level);
+				match.Status = SessionStatus.InProgress;
+				match.StartedAtUtc = UtcNow;
+				StartTurnClock(match);
+			}
+
 			string code;
 			do
 			{
@@ -74,26 +83,31 @@ namespace Checkers.Application.Core.Sessions
 		}
 
 		public SessionResult MakeMove(string matchCode, int userId, GameMove move) =>
-			ActOnMatch(matchCode, userId, (match, color) =>
-			{
-				if (color != match.CurrentPlayer)
-					return SessionResult.Failure(Game.NotYourTurnError);
+			ActOnMatch(matchCode, userId, (match, color) => PlayStep(match, color, move));
 
-				if (match.Game.TryMove(move) is { } error)
-					return SessionResult.Failure(error);
+		public SessionResult MakeComputerMove(string matchCode, GameMove move) =>
+			ActOnMatch(matchCode, match => match.ComputerColor, (match, color) => PlayStep(match, color, move));
 
-				match.Moves.Add(move);
-				// Playing on answers a draw offer, from either side.
-				match.DrawOfferedBy = null;
+		private SessionResult PlayStep(LiveMatch match, PlayerColor color, GameMove move)
+		{
+			if (color != match.CurrentPlayer)
+				return SessionResult.Failure(Game.NotYourTurnError);
 
-				if (match.Game.Outcome != GameOutcome.InProgress)
-					match.Finish(match.Game.Outcome, GameEndReason.NoLegalMoves, UtcNow);
-				// A multi-jump keeps the same turn, so its clock keeps running.
-				else if (match.CurrentPlayer != color)
-					StartTurnClock(match);
+			if (match.Game.TryMove(move) is { } error)
+				return SessionResult.Failure(error);
 
-				return SessionResult.Success(match.ToDto());
-			});
+			match.Moves.Add(move);
+			// Playing on answers a draw offer, from either side.
+			match.DrawOfferedBy = null;
+
+			if (match.Game.Outcome != GameOutcome.InProgress)
+				match.Finish(match.Game.Outcome, GameEndReason.NoLegalMoves, UtcNow);
+			// A multi-jump keeps the same turn, so its clock keeps running.
+			else if (match.CurrentPlayer != color)
+				StartTurnClock(match);
+
+			return SessionResult.Success(match.ToDto());
+		}
 
 		public SessionResult Resign(string matchCode, int userId) =>
 			ActOnMatch(matchCode, userId, (match, color) =>
@@ -113,20 +127,42 @@ namespace Checkers.Application.Core.Sessions
 			});
 
 		public SessionResult AnswerDraw(string matchCode, int userId, bool accept) =>
-			ActOnMatch(matchCode, userId, (match, color) =>
+			ActOnMatch(matchCode, userId, (match, color) => Answer(match, color, accept));
+
+		public SessionResult AnswerDrawForComputer(string matchCode, bool accept) =>
+			ActOnMatch(matchCode, match => match.ComputerColor, (match, color) => Answer(match, color, accept));
+
+		private SessionResult Answer(LiveMatch match, PlayerColor color, bool accept)
+		{
+			if (match.DrawOfferedBy is not { } offeredBy)
+				return SessionResult.Failure(Game.NoDrawOfferError);
+
+			if (offeredBy == color)
+				return SessionResult.Failure(Game.OwnDrawOfferError);
+
+			match.DrawOfferedBy = null;
+			if (accept)
+				match.Finish(GameOutcome.Draw, GameEndReason.DrawAgreed, UtcNow);
+
+			return SessionResult.Success(match.ToDto());
+		}
+
+		public IReadOnlyList<GameSessionDto> GetMatchesAwaitingComputer()
+		{
+			var waiting = new List<GameSessionDto>();
+			foreach (var match in _matches.Values)
 			{
-				if (match.DrawOfferedBy is not { } offeredBy)
-					return SessionResult.Failure(Game.NoDrawOfferError);
+				lock (match)
+				{
+					if (match.Status == SessionStatus.InProgress
+						&& match.ComputerColor is { } computer
+						&& (match.CurrentPlayer == computer || match.DrawOfferedBy == Game.Opponent(computer)))
+						waiting.Add(match.ToDto());
+				}
+			}
 
-				if (offeredBy == color)
-					return SessionResult.Failure(Game.OwnDrawOfferError);
-
-				match.DrawOfferedBy = null;
-				if (accept)
-					match.Finish(GameOutcome.Draw, GameEndReason.DrawAgreed, UtcNow);
-
-				return SessionResult.Success(match.ToDto());
-			});
+			return waiting;
+		}
 
 		public IReadOnlyList<GameSessionDto> ExpireOverdueTurns()
 		{
@@ -166,6 +202,7 @@ namespace Checkers.Application.Core.Sessions
 						Status = match.Status,
 						OpponentName = color == PlayerColor.Black ? match.WhitePlayerName : match.BlackPlayerName,
 						PlayedAs = color.ToString(),
+						VsComputer = match.ComputerColor is not null,
 						IsYourTurn = match.Status == SessionStatus.InProgress && match.CurrentPlayer == color,
 						MoveCount = match.Moves.Count,
 						StartedAtUtc = match.StartedAtUtc,
@@ -201,14 +238,20 @@ namespace Checkers.Application.Core.Sessions
 		/// its players and the match is in progress. The action gets the user's color. A turn whose
 		/// time has run out ends the match first, before anyone can act on it.
 		/// </summary>
-		private SessionResult ActOnMatch(string matchCode, int userId, Func<LiveMatch, PlayerColor, SessionResult> action)
+		private SessionResult ActOnMatch(string matchCode, int userId, Func<LiveMatch, PlayerColor, SessionResult> action) =>
+			ActOnMatch(matchCode, match => match.HasPlayer(userId) ? match.ColorOf(userId) : null, action);
+
+		/// <summary>
+		/// As above, for whichever side <paramref name="sideOf"/> picks (a user's, or the computer's).
+		/// </summary>
+		private SessionResult ActOnMatch(string matchCode, Func<LiveMatch, PlayerColor?> sideOf, Func<LiveMatch, PlayerColor, SessionResult> action)
 		{
 			if (!_matches.TryGetValue(matchCode, out var match))
 				return SessionResult.Failure("Match not found.");
 
 			lock (match)
 			{
-				if (!match.HasPlayer(userId))
+				if (sideOf(match) is not { } side)
 					return SessionResult.Failure("You are not a player in this match.");
 
 				// Carries the finished match with the error, so callers still publish the result.
@@ -221,7 +264,7 @@ namespace Checkers.Application.Core.Sessions
 				if (match.Status != SessionStatus.InProgress)
 					return SessionResult.Failure("This match is not in progress.");
 
-				return action(match, match.ColorOf(userId));
+				return action(match, side);
 			}
 		}
 
@@ -265,7 +308,24 @@ namespace Checkers.Application.Core.Sessions
 			/// The empty side, or null once both players are seated.
 			/// </summary>
 			public PlayerColor? OpenSeat =>
-				BlackPlayerId is null ? PlayerColor.Black : WhitePlayerId is null ? PlayerColor.White : null;
+				BlackPlayerId is null && ComputerColor != PlayerColor.Black ? PlayerColor.Black
+				: WhitePlayerId is null && ComputerColor != PlayerColor.White ? PlayerColor.White
+				: null;
+
+			/// <summary>
+			/// The side the computer plays (it has no user id), or null for two people.
+			/// </summary>
+			public PlayerColor? ComputerColor { get; private set; }
+			public ComputerDifficulty? ComputerDifficulty { get; private set; }
+
+			public void SeatComputer(PlayerColor color, ComputerDifficulty level)
+			{
+				ComputerColor = color;
+				ComputerDifficulty = level;
+				var name = ComputerPlayer.NameOf(level);
+				if (color == PlayerColor.Black) BlackPlayerName = name;
+				else WhitePlayerName = name;
+			}
 
 			public bool HasPlayer(int userId) => userId == BlackPlayerId || userId == WhitePlayerId;
 			public PlayerColor ColorOf(int userId) => userId == BlackPlayerId ? PlayerColor.Black : PlayerColor.White;
@@ -313,7 +373,9 @@ namespace Checkers.Application.Core.Sessions
 				TurnDeadlineUtc = TurnDeadlineUtc,
 				StartedAtUtc = StartedAtUtc,
 				EndedAtUtc = EndedAtUtc,
-				DrawOfferedBy = DrawOfferedBy
+				DrawOfferedBy = DrawOfferedBy,
+				ComputerColor = ComputerColor,
+				ComputerDifficulty = ComputerDifficulty
 			};
 		}
 	}

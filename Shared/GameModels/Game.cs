@@ -70,6 +70,46 @@ namespace Checkers.Shared.GameModels
 			CheckForWinner();
 		}
 
+		// Copies everything, including a multi-jump in progress, for the computer player's search.
+		private Game(Game other)
+		{
+			Board = Board.FromSquares(other.Board.Size, other.Board.ToSquares());
+			CurrentTurn = other.CurrentTurn;
+			Winner = other.Winner;
+			EndReason = other.EndReason;
+			DrawOfferedBy = other.DrawOfferedBy;
+			JumpingPiece = other.JumpingPiece;
+			Rules = other.Rules;
+			_moves.AddRange(other._moves);
+			// The sequences themselves are never changed, so the copy can share them.
+			_turnCaptures = other._turnCaptures;
+			_turnHops.AddRange(other._turnHops);
+			_pendingCaptures.AddRange(other._pendingCaptures);
+		}
+
+		/// <summary>
+		/// An independent copy of the game as it stands, e.g. to try moves without playing them.
+		/// </summary>
+		public Game Clone() => new(this);
+
+		/// <summary>
+		/// Plays saved or live moves from the variant's starting position. Stops at the first move the
+		/// rules refuse and returns how many were played.
+		/// </summary>
+		public static (Game Game, int Played) Replay(GameRuleOptions rules, IEnumerable<GameMove> moves)
+		{
+			var game = new Game(rules);
+			var played = 0;
+			foreach (var move in moves)
+			{
+				if (!game.TryMove(new Square(move.FromRow, move.FromCol), new Square(move.ToRow, move.ToCol)).Success)
+					break;
+				played++;
+			}
+
+			return (game, played);
+		}
+
 		//Checks for all legal moves a player is able to make
 		public IReadOnlyList<Move> GetLegalMoves()
 		{

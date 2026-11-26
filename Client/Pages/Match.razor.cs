@@ -52,6 +52,19 @@ namespace Checkers.Client.Pages
 		// Match settings the creator picks.
 		private ColorChoice creatorColor = ColorChoice.Black;
 		private GameRuleOptions rules = GameRuleOptions.Standard;
+		private bool vsComputer;
+		private ComputerDifficulty computerLevel = ComputerDifficulty.Medium;
+
+		private sealed record LevelChoice(ComputerDifficulty Value, string Text);
+
+		private static readonly LevelChoice[] ComputerLevels =
+		[
+			new(ComputerDifficulty.Beginner, "Beginner: plays any legal move"),
+			new(ComputerDifficulty.Easy, "Easy: looks one turn ahead, often misjudges"),
+			new(ComputerDifficulty.Medium, "Medium: looks three turns ahead"),
+			new(ComputerDifficulty.Hard, "Hard: looks five turns ahead"),
+			new(ComputerDifficulty.Expert, "Expert: thinks as deep as it can"),
+		];
 		private bool useTurnLimit;
 		private int turnLimitAmount = 1;
 		private int turnLimitUnitSeconds = 60 * 60;
@@ -92,7 +105,8 @@ namespace Checkers.Client.Pages
 		private string StatusText => Session switch
 		{
 			{ Status: SessionStatus.WaitingForOpponent } => "Waiting for your opponent to join. Share the code above.",
-			{ Status: SessionStatus.InProgress } => IsMyTurn ? "Your turn" : "Opponent's turn",
+			{ Status: SessionStatus.InProgress } => IsMyTurn ? "Your turn"
+				: Session.ComputerColor is not null ? "The computer is thinking…" : "Opponent's turn",
 			{ Outcome: GameOutcome.Draw } => "The game is a draw.",
 			{ Outcome: GameOutcome.BlackWon or GameOutcome.WhiteWon } session => EndText(session),
 			_ => string.Empty
@@ -191,6 +205,7 @@ namespace Checkers.Client.Pages
 			CreatorColor = creatorColor,
 			Rules = rules,
 			TurnTimeLimitSeconds = useTurnLimit ? (int)TurnLimitSeconds : null,
+			Computer = vsComputer ? computerLevel : null,
 		}));
 
 		private Task JoinMatch() => RunAsync(() => Sessions.JoinMatchAsync(joinCode));

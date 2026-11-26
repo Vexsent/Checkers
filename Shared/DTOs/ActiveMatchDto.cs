@@ -17,6 +17,7 @@ namespace Checkers.Shared.DTOs
 		/// "Black" or "White".
 		/// </summary>
 		public string PlayedAs { get; set; } = default!;
+		public bool VsComputer { get; set; }
 		/// <summary>
 		/// True when the match is in progress and it's this user's move.
 		/// </summary>

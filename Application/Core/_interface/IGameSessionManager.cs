@@ -39,6 +39,19 @@ namespace Checkers.Application.Core.Services
 		/// </summary>
 		IReadOnlyList<GameSessionDto> ExpireOverdueTurns();
 		/// <summary>
+		/// Matches where the computer has something to do: it's the computer's turn, or the player
+		/// has offered it a draw.
+		/// </summary>
+		IReadOnlyList<GameSessionDto> GetMatchesAwaitingComputer();
+		/// <summary>
+		/// Plays one step for the computer's side.
+		/// </summary>
+		SessionResult MakeComputerMove(string matchCode, GameMove move);
+		/// <summary>
+		/// Answers the player's draw offer on the computer's behalf.
+		/// </summary>
+		SessionResult AnswerDrawForComputer(string matchCode, bool accept);
+		/// <summary>
 		/// True the first time it's called for a finished match and false after that, so a match
 		/// that both players finish at once is still saved only once.
 		/// </summary>

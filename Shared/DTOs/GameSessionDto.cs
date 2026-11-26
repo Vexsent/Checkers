@@ -22,6 +22,11 @@ namespace Checkers.Shared.DTOs
 		public string? BlackPlayerName { get; set; }
 		public int? WhitePlayerId { get; set; }
 		public string? WhitePlayerName { get; set; }
+		/// <summary>
+		/// The side the computer plays, or null when both players are people. That side has no player id.
+		/// </summary>
+		public PlayerColor? ComputerColor { get; set; }
+		public ComputerDifficulty? ComputerDifficulty { get; set; }
 		public PlayerColor CurrentPlayer { get; set; }
 		public int BoardSize { get; set; }
 		/// <summary>

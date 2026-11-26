@@ -19,6 +19,11 @@ namespace Checkers.Shared.DTOs
 		/// How long each player gets to finish a turn before they automatically resign. Null for no limit.
 		/// </summary>
 		public int? TurnTimeLimitSeconds { get; set; }
+		/// <summary>
+		/// Play against the computer at this level, on the side the creator doesn't take. Null for a
+		/// match against another player.
+		/// </summary>
+		public ComputerDifficulty? Computer { get; set; }
 
 		/// <summary>
 		/// Why these settings can't be used, or null if they're fine.
@@ -27,6 +32,9 @@ namespace Checkers.Shared.DTOs
 		{
 			if (!Enum.IsDefined(CreatorColor))
 				return "Unknown color choice.";
+
+			if (Computer is { } level && !Enum.IsDefined(level))
+				return "Unknown computer difficulty.";
 
 			if ((Rules ?? GameRuleOptions.Standard).Validate() is { } rulesError)
 				return rulesError;

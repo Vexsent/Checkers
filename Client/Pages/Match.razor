@@ -13,9 +13,24 @@
         <h1>Play a Match</h1>
         <RadzenStack Gap="1.5rem">
             <RadzenStack Gap="0.5rem">
-                <p>Start a match and share its code with your opponent.</p>
+                <p>Start a match against the computer, or against another player by sharing its code.</p>
                 <RadzenFieldset Text="Match settings">
                     <RadzenStack Gap="1rem">
+                        <RadzenStack Gap="0.25rem">
+                            <RadzenLabel Text="Opponent" Component="opponent" />
+                            <RadzenSelectBar @bind-Value="@vsComputer" TValue="bool" Name="opponent" Size="ButtonSize.Small">
+                                <Items>
+                                    <RadzenSelectBarItem Text="Another player" Value="false" />
+                                    <RadzenSelectBarItem Text="Computer" Value="true" />
+                                </Items>
+                            </RadzenSelectBar>
+                            @if (vsComputer)
+                            {
+                                <RadzenDropDown @bind-Value="@computerLevel" TValue="ComputerDifficulty" Data="@ComputerLevels" Name="computer-level"
+                                                TextProperty="Text" ValueProperty="Value" Style="max-width: 22rem;" aria-label="Computer difficulty" />
+                            }
+                        </RadzenStack>
+
                         <RadzenStack Gap="0.25rem">
                             <RadzenLabel Text="Game type" Component="game-type" />
                             <RadzenDropDown @bind-Value="@SelectedVariant" TValue="GameVariant" Data="@VariantChoices" Name="game-type"
@@ -123,7 +138,8 @@
                         </RadzenStack>
                     </RadzenStack>
                 </RadzenFieldset>
-                <RadzenButton Text="Create match" Icon="add" Disabled="@(busy || TurnLimitError is not null)" Click="@CreateMatch" />
+                <RadzenButton Text="@(vsComputer ? "Play the computer" : "Create match")" Icon="@(vsComputer ? "smart_toy" : "add")"
+                              Disabled="@(busy || TurnLimitError is not null)" Click="@CreateMatch" />
             </RadzenStack>
             <RadzenStack Gap="0.5rem">
                 <p>Or enter the code your opponent gave you.</p>
@@ -136,7 +152,10 @@
     {
         <div class="match-header">
             <div>
-                <div class="match-code">Match code: <strong>@Session.MatchCode</strong></div>
+                @if (Session.ComputerColor is null)
+                {
+                    <div class="match-code">Match code: <strong>@Session.MatchCode</strong></div>
+                }
                 <div>Black: @(Session.BlackPlayerName ?? "waiting…")@(Session.BlackPlayerId == myUserId ? " (you)" : "") · White: @(Session.WhitePlayerName ?? "waiting…")@(Session.WhitePlayerId == myUserId ? " (you)" : "")</div>
                 <div class="match-rules">@MatchTimeText.DescribeRules(Session.Rules, Session.TurnTimeLimitSeconds)</div>
                 <div class="match-status">@StatusText</div>
