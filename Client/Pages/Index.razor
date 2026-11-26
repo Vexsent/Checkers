@@ -27,5 +27,6 @@ else
         }
     </RadzenStack>
 
-    <BoardView Board="@game.Board" Selected="@selected" Highlighted="@highlighted" OnSquareClicked="@SquareClicked" />
+    <BoardView Board="@game.Board" Selected="@selected" Highlighted="@highlighted" OnSquareClicked="@SquareClicked"
+               Rejected="@rejected" RejectedCount="@rejectedCount" Hints="@Hints" />
 }

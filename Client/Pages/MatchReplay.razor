@@ -35,7 +35,7 @@
 
         <div class="replay-body">
             <div class="replay-board">
-                <BoardView Board="@CurrentBoard" Selected="@LastLanding" Highlighted="@LastPath" />
+                <BoardView Board="@CurrentBoard" Selected="@LastLanding" Highlighted="@LastPath" Flipped="@(match.PlayedAs == "Black")" />
 
                 <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" AlignItems="AlignItems.Center" class="replay-controls">
                     <RadzenButton Icon="first_page" ButtonStyle="ButtonStyle.Light" Disabled="@(step == 0)" Click="@(() => GoTo(0))" aria-label="First move" />
