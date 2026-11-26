@@ -45,6 +45,7 @@ namespace Checkers.Application.Core.Sessions
 				}).ToList(),
 				Rules = session.Rules,
 				TurnTimeLimitSeconds = session.TurnTimeLimitSeconds,
+				ComputerDifficulty = session.ComputerDifficulty,
 			};
 
 			return await matchHistory.RecordMatchAsync(humanId, request);

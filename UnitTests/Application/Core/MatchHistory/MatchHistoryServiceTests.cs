@@ -261,6 +261,84 @@ namespace UnitTests.Application.Core.MatchHistory
 			Assert.True((await _sut.RecordMatchAsync(MeId, request)).Success);
 		}
 
+		[Fact]
+		public async Task GetHistoryAsync_ComputerLevelInTheJson_NamesTheOpponentWithIt()
+		{
+			var match = NewMatch(Me, null, MatchResult.BlackWin);
+			match.RulesJson = "{\"Variant\":\"Russian\",\"FirstPlayer\":\"White\",\"ComputerDifficulty\":\"Expert\"}";
+			GivenMatches(match);
+
+			var summary = Assert.Single((await _sut.GetHistoryAsync(MeId)).Matches);
+
+			Assert.True(summary.VsComputer);
+			Assert.Equal(ComputerDifficulty.Expert, summary.ComputerDifficulty);
+			Assert.Equal("Computer (Expert)", summary.OpponentName);
+		}
+
+		[Fact]
+		public async Task GetHistoryAsync_ComputerMatchWithoutALevel_IsJustComputer()
+		{
+			GivenMatches(NewMatch(Me, null, MatchResult.BlackWin));
+
+			var summary = Assert.Single((await _sut.GetHistoryAsync(MeId)).Matches);
+
+			Assert.Null(summary.ComputerDifficulty);
+			Assert.Equal(MatchSummaryDto.ComputerOpponentName, summary.OpponentName);
+		}
+
+		[Fact]
+		public async Task GetMatchAsync_ComputerLevelDoesNotDisturbTheRules()
+		{
+			var match = NewMatch(null, Me, MatchResult.WhiteWin);
+			match.RulesJson = "{\"Variant\":\"Casual\",\"ForcedCaptures\":false,\"ComputerDifficulty\":\"Hard\"}";
+			_matchRecordRepository.Setup(r => r.GetByIdWithMovesAsync(match.Id)).ReturnsAsync(match);
+
+			var replay = await _sut.GetMatchAsync(MeId, match.Id);
+
+			Assert.Equal(GameVariants.Find(GameVariant.Casual)!.Rules, replay!.Rules);
+			Assert.Equal("Computer (Hard)", replay.BlackPlayerName);
+			Assert.Equal(ComputerDifficulty.Hard, replay.ComputerDifficulty);
+		}
+
+		[Fact]
+		public async Task RecordMatchAsync_AgainstComputer_StoresTheLevelBesideTheRules()
+		{
+			MatchRecord? saved = null;
+			_matchRecordRepository.Setup(r => r.AddAsync(It.IsAny<MatchRecord>())).Callback<MatchRecord>(m => saved = m);
+			var request = ValidRecordRequest();
+			request.WhitePlayerId = null;
+			request.ComputerDifficulty = ComputerDifficulty.Medium;
+
+			var result = await _sut.RecordMatchAsync(MeId, request);
+
+			Assert.True(result.Success, string.Join(" ", result.Errors));
+			Assert.Contains("\"ComputerDifficulty\":\"Medium\"", saved!.RulesJson);
+			Assert.Contains("\"Variant\":\"American\"", saved.RulesJson);
+		}
+
+		[Fact]
+		public async Task RecordMatchAsync_TwoPlayers_HasNoComputerLevelInTheJson()
+		{
+			MatchRecord? saved = null;
+			_matchRecordRepository.Setup(r => r.AddAsync(It.IsAny<MatchRecord>())).Callback<MatchRecord>(m => saved = m);
+
+			await _sut.RecordMatchAsync(MeId, ValidRecordRequest());
+
+			Assert.DoesNotContain("ComputerDifficulty", saved!.RulesJson);
+		}
+
+		[Fact]
+		public async Task RecordMatchAsync_ComputerLevelWithTwoPlayers_Fails()
+		{
+			var request = ValidRecordRequest();
+			request.ComputerDifficulty = ComputerDifficulty.Hard;
+
+			var result = await _sut.RecordMatchAsync(MeId, request);
+
+			Assert.False(result.Success);
+			_matchRecordRepository.Verify(r => r.AddAsync(It.IsAny<MatchRecord>()), Times.Never);
+		}
+
 		// ---- RecordMatchAsync ----
 
 		[Fact]

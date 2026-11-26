@@ -13,6 +13,10 @@ namespace Checkers.Shared.DTOs
 		public string OpponentName { get; set; } = default!;
 		public bool VsComputer { get; set; }
 		/// <summary>
+		/// The computer's level, when known. Matches saved before levels were stored have none.
+		/// </summary>
+		public ComputerDifficulty? ComputerDifficulty { get; set; }
+		/// <summary>
 		/// "Black" or "White".
 		/// </summary>
 		public string PlayedAs { get; set; } = default!;

@@ -179,10 +179,18 @@ namespace UnitTests.Application.Core.Sessions
 			var history = await _matchHistory.GetHistoryAsync(_player.Id);
 			var summary = Assert.Single(history.Matches);
 			Assert.True(summary.VsComputer);
-			Assert.Equal(MatchSummaryDto.ComputerOpponentName, summary.OpponentName);
+			Assert.Equal(ComputerDifficulty.Easy, summary.ComputerDifficulty);
+			Assert.Equal("Computer (Easy)", summary.OpponentName);
+
+			// The level is stored beside the rules in the same JSON column.
+			var record = await _context.MatchRecords.SingleAsync();
+			Assert.Contains("\"ComputerDifficulty\":\"Easy\"", record.RulesJson);
 
 			var match = await _matchHistory.GetMatchAsync(_player.Id, saved.MatchId!.Value);
-			var (replayed, played) = Game.Replay(match!.Rules, match.Moves.Select(m => new GameMove(m.FromRow, m.FromCol, m.ToRow, m.ToCol)));
+			Assert.Equal(rules, match!.Rules);
+			Assert.Equal("Computer (Easy)", color == ColorChoice.Black ? match.WhitePlayerName : match.BlackPlayerName);
+			Assert.Equal("player", color == ColorChoice.Black ? match.BlackPlayerName : match.WhitePlayerName);
+			var (replayed, played) = Game.Replay(match.Rules, match.Moves.Select(m => new GameMove(m.FromRow, m.FromCol, m.ToRow, m.ToCol)));
 			Assert.Equal(match.Moves.Count, played);
 			Assert.Equal(session.Squares, replayed.Board.ToSquares());
 		}

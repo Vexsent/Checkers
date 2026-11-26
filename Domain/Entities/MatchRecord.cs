@@ -21,7 +21,8 @@ namespace Checkers.Domain.Entities
 		public int? TurnTimeLimitSeconds { get; set; }
 		/// <summary>
 		/// The full rule set as JSON (variant, board size, capture rules...), needed to replay the
-		/// match. Null means standard American checkers, which every match before variants was.
+		/// match, plus "ComputerDifficulty" for a match against the computer. Null means standard
+		/// American checkers, which every match before variants was.
 		/// </summary>
 		public string? RulesJson { get; set; }
 		/// <summary>

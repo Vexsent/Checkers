@@ -22,5 +22,9 @@ namespace Checkers.Shared.DTOs
 		/// </summary>
 		public GameRuleOptions Rules { get; set; } = GameRuleOptions.Standard;
 		public int? TurnTimeLimitSeconds { get; set; }
+		/// <summary>
+		/// The computer's level, for a match against the computer (the side with no player id).
+		/// </summary>
+		public ComputerDifficulty? ComputerDifficulty { get; set; }
 	}
 }
