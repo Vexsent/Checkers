@@ -7,146 +7,164 @@
 
 <PageTitle>Play a Match</PageTitle>
 
-<div class="@(Session is null ? "match-page" : "match-page playing")">
+<div class="@(Session is null ? "match-page setup" : "match-page playing")">
     @if (Session is null)
     {
-        <h1>Play a Match</h1>
-        <RadzenStack Gap="1.5rem">
-            <RadzenStack Gap="0.5rem">
-                <p>Start a match against the computer, or against another player by sharing its code.</p>
-                <RadzenFieldset Text="Match settings">
-                    <RadzenStack Gap="1rem">
-                        <RadzenStack Gap="0.25rem">
-                            <RadzenLabel Text="Opponent" Component="opponent" />
-                            <RadzenSelectBar @bind-Value="@vsComputer" TValue="bool" Name="opponent" Size="ButtonSize.Small">
-                                <Items>
-                                    <RadzenSelectBarItem Text="Another player" Value="false" />
-                                    <RadzenSelectBarItem Text="Computer" Value="true" />
-                                </Items>
-                            </RadzenSelectBar>
-                            @if (vsComputer)
-                            {
-                                <RadzenDropDown @bind-Value="@computerLevel" TValue="ComputerDifficulty" Data="@ComputerLevels" Name="computer-level"
-                                                TextProperty="Text" ValueProperty="Value" Style="max-width: 22rem;" aria-label="Computer difficulty" />
-                            }
-                        </RadzenStack>
+        <div class="setup-title">
+            <h1>Play a Match</h1>
+            <p>Play the computer, or another player by sharing the match code.</p>
+        </div>
 
-                        <RadzenStack Gap="0.25rem">
-                            <RadzenLabel Text="Game type" Component="game-type" />
-                            <RadzenDropDown @bind-Value="@SelectedVariant" TValue="GameVariant" Data="@VariantChoices" Name="game-type"
-                                            TextProperty="@nameof(VariantChoice.Name)" ValueProperty="@nameof(VariantChoice.Variant)" Style="max-width: 22rem;" />
-                            <RadzenText TextStyle="TextStyle.Caption">@VariantDescription <RadzenLink Path="rules" Text="What do these rules mean?" /></RadzenText>
-                        </RadzenStack>
+        <div class="setup-grid">
+            <section class="setup-panel" aria-labelledby="new-match">
+                <div class="setup-panel-head">
+                    <h2 id="new-match">@(showRuleEditor ? "Customize rules" : "New match")</h2>
+                    <RadzenLink Path="rules" Text="Rules help" class="rules-help" />
+                    <RadzenButton Text="@(showRuleEditor ? "Back" : "Customize rules")" Icon="@(showRuleEditor ? "arrow_back" : "tune")"
+                                  Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Click="@(() => showRuleEditor = !showRuleEditor)" />
+                </div>
 
-                        <RadzenStack Gap="0.25rem">
-                            <RadzenLabel Text="Play as" Component="creator-color" />
-                            <RadzenSelectBar @bind-Value="@creatorColor" TValue="ColorChoice" Name="creator-color" Size="ButtonSize.Small">
-                                <Items>
-                                    <RadzenSelectBarItem Text="@ColorLabel(PlayerColor.Black)" Value="ColorChoice.Black" />
-                                    <RadzenSelectBarItem Text="@ColorLabel(PlayerColor.White)" Value="ColorChoice.White" />
-                                    <RadzenSelectBarItem Text="Random" Value="ColorChoice.Random" />
-                                </Items>
-                            </RadzenSelectBar>
-                        </RadzenStack>
+                <div class="setup-panel-body">
+                    @if (!showRuleEditor)
+                    {
+                        <div class="setup-fields">
+                            <div class="field">
+                                <RadzenLabel Text="Opponent" Component="opponent" />
+                                <RadzenDropDown @bind-Value="@OpponentKey" TValue="int" Data="@OpponentChoices" Name="opponent"
+                                                TextProperty="Text" ValueProperty="Key" Style="width: 100%;" />
+                            </div>
 
-                        <details class="rule-editor">
-                            <summary>Customize rules</summary>
-                            <RadzenStack Gap="0.75rem" class="rule-editor-body">
-                                <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
-                                    <RadzenStack Gap="0.25rem">
-                                        <RadzenLabel Text="Board" Component="board-size" />
-                                        <RadzenDropDown @bind-Value="@BoardSize" TValue="int" Data="@BoardSizes" Name="board-size"
-                                                        TextProperty="Text" ValueProperty="Value" Style="width: 8rem;" />
-                                    </RadzenStack>
-                                    <RadzenStack Gap="0.25rem">
-                                        <RadzenLabel Text="Rows of men" Component="piece-rows" />
-                                        <RadzenNumeric @bind-Value="@PieceRows" TValue="int" Min="1" Max="@(BoardSize / 2 - 1)" Name="piece-rows" Style="width: 6rem;" />
-                                    </RadzenStack>
-                                    <RadzenStack Gap="0.25rem">
-                                        <RadzenLabel Text="Moves first" Component="first-player" />
-                                        <RadzenSelectBar @bind-Value="@FirstPlayer" TValue="PlayerColor" Name="first-player" Size="ButtonSize.Small">
-                                            <Items>
-                                                <RadzenSelectBarItem Text="Black" Value="PlayerColor.Black" />
-                                                <RadzenSelectBarItem Text="White" Value="PlayerColor.White" />
-                                            </Items>
-                                        </RadzenSelectBar>
-                                    </RadzenStack>
-                                </RadzenStack>
+                            <div class="field">
+                                <RadzenLabel Text="Play as" Component="creator-color" />
+                                <RadzenSelectBar @bind-Value="@creatorColor" TValue="ColorChoice" Name="creator-color" Size="ButtonSize.Small">
+                                    <Items>
+                                        <RadzenSelectBarItem Text="@ColorLabel(PlayerColor.Black)" Value="ColorChoice.Black" />
+                                        <RadzenSelectBarItem Text="@ColorLabel(PlayerColor.White)" Value="ColorChoice.White" />
+                                        <RadzenSelectBarItem Text="Random" Value="ColorChoice.Random" />
+                                    </Items>
+                                </RadzenSelectBar>
+                            </div>
 
-                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                                    <RadzenSwitch @bind-Value="@ForcedCaptures" Name="forced-captures" />
-                                    <RadzenLabel Text="Forced captures (a multi-jump that's started must be finished either way)" Component="forced-captures" />
-                                </RadzenStack>
-                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                                    <RadzenSwitch @bind-Value="@MenCaptureBackward" Name="men-backward" />
-                                    <RadzenLabel Text="Men capture backwards" Component="men-backward" />
-                                </RadzenStack>
-                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                                    <RadzenSwitch @bind-Value="@MenCanCaptureKings" Name="men-kings" />
-                                    <RadzenLabel Text="Men can capture kings" Component="men-kings" />
-                                </RadzenStack>
-                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                                    <RadzenSwitch @bind-Value="@FlyingKings" Name="flying-kings" />
-                                    <RadzenLabel Text="Flying kings (move and capture any distance)" Component="flying-kings" />
-                                </RadzenStack>
-                                @if (FlyingKings)
+                            <div class="field field-wide">
+                                <RadzenLabel Text="Game type" Component="game-type" />
+                                <RadzenDropDown @bind-Value="@SelectedVariant" TValue="GameVariant" Data="@VariantChoices" Name="game-type"
+                                                TextProperty="@nameof(VariantChoice.Name)" ValueProperty="@nameof(VariantChoice.Variant)" Style="width: 100%; max-width: 22rem;" />
+                                <RadzenText TextStyle="TextStyle.Caption" class="field-note variant-note">@VariantDescription <RadzenLink Path="rules" Text="What do these rules mean?" /></RadzenText>
+                            </div>
+
+                            <div class="field field-wide">
+                                <div class="field-inline">
+                                    <RadzenSwitch @bind-Value="@useTurnLimit" Name="turn-limit" />
+                                    <RadzenLabel Text="Turn limit" Component="turn-limit" />
+                                    @if (useTurnLimit)
+                                    {
+                                        <RadzenNumeric @bind-Value="@turnLimitAmount" TValue="int" Min="1" Style="width: 4.25rem;" aria-label="Turn time limit amount" />
+                                        <RadzenDropDown @bind-Value="@turnLimitUnitSeconds" TValue="int" Data="@TurnLimitUnits"
+                                                        TextProperty="@nameof(TurnLimitUnit.Name)" ValueProperty="@nameof(TurnLimitUnit.Seconds)"
+                                                        Style="width: 6.5rem;" aria-label="Turn time limit unit" />
+                                    }
+                                </div>
+                                @if (useTurnLimit)
                                 {
-                                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" Style="padding-left: 1.5rem;">
-                                        <RadzenSwitch @bind-Value="@KingStopsBehindCapture" Name="king-stops" />
-                                        <RadzenLabel Text="A capturing king lands right behind the piece" Component="king-stops" />
-                                    </RadzenStack>
+                                    <RadzenText TextStyle="TextStyle.Caption" class="@(TurnLimitError is null ? "field-note limit-note" : "field-note")" Style="@(TurnLimitError is null ? null : "color: var(--rz-danger);")">
+                                        @(TurnLimitError ?? "30 seconds to 1 week. Run out of time and you resign.")
+                                    </RadzenText>
                                 }
-                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                                    <RadzenSwitch @bind-Value="@RemoveCapturedAtEndOfMove" Name="remove-end" />
-                                    <RadzenLabel Text="Captured pieces stay on the board until the move ends" Component="remove-end" />
-                                </RadzenStack>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="setup-fields">
+                            <div class="field">
+                                <RadzenLabel Text="Game type" Component="game-type-custom" />
+                                <RadzenDropDown @bind-Value="@SelectedVariant" TValue="GameVariant" Data="@VariantChoices" Name="game-type-custom"
+                                                TextProperty="@nameof(VariantChoice.Name)" ValueProperty="@nameof(VariantChoice.Variant)" Style="width: 100%;" />
+                            </div>
+                            <div class="field field-inline-group">
+                                <div class="field">
+                                    <RadzenLabel Text="Board" Component="board-size" />
+                                    <RadzenDropDown @bind-Value="@BoardSize" TValue="int" Data="@BoardSizes" Name="board-size"
+                                                    TextProperty="Text" ValueProperty="Value" Style="width: 7.5rem;" />
+                                </div>
+                                <div class="field">
+                                    <RadzenLabel Text="Rows of men" Component="piece-rows" />
+                                    <RadzenNumeric @bind-Value="@PieceRows" TValue="int" Min="1" Max="@(BoardSize / 2 - 1)" Name="piece-rows" Style="width: 5.5rem;" />
+                                </div>
+                                <div class="field">
+                                    <RadzenLabel Text="Moves first" Component="first-player" />
+                                    <RadzenSelectBar @bind-Value="@FirstPlayer" TValue="PlayerColor" Name="first-player" Size="ButtonSize.Small">
+                                        <Items>
+                                            <RadzenSelectBarItem Text="Black" Value="PlayerColor.Black" />
+                                            <RadzenSelectBarItem Text="White" Value="PlayerColor.White" />
+                                        </Items>
+                                    </RadzenSelectBar>
+                                </div>
+                            </div>
 
-                                <RadzenStack Gap="0.25rem">
-                                    <RadzenLabel Text="When several captures are possible" Component="capture-choice" />
-                                    <RadzenDropDown @bind-Value="@CaptureChoiceValue" TValue="CaptureChoice" Data="@CaptureChoices" Name="capture-choice"
-                                                    TextProperty="Text" ValueProperty="Value" Style="max-width: 26rem;" />
-                                </RadzenStack>
-                                <RadzenStack Gap="0.25rem">
-                                    <RadzenLabel Text="A man reaching the far row mid-capture" Component="promotion" />
-                                    <RadzenDropDown @bind-Value="@Promotion" TValue="PromotionRule" Data="@PromotionChoices" Name="promotion"
-                                                    TextProperty="Text" ValueProperty="Value" Style="max-width: 26rem;" />
-                                </RadzenStack>
-                            </RadzenStack>
-                        </details>
+                            <div class="field">
+                                <RadzenLabel Text="When several captures are possible" Component="capture-choice" />
+                                <RadzenDropDown @bind-Value="@CaptureChoiceValue" TValue="CaptureChoice" Data="@CaptureChoices" Name="capture-choice"
+                                                TextProperty="Text" ValueProperty="Value" Style="width: 100%;" />
+                            </div>
+                            <div class="field">
+                                <RadzenLabel Text="A man reaching the far row mid-capture" Component="promotion" />
+                                <RadzenDropDown @bind-Value="@Promotion" TValue="PromotionRule" Data="@PromotionChoices" Name="promotion"
+                                                TextProperty="Text" ValueProperty="Value" Style="width: 100%;" />
+                            </div>
 
-                        <RadzenStack Gap="0.25rem">
-                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                                <RadzenSwitch @bind-Value="@useTurnLimit" Name="turn-limit" />
-                                <RadzenLabel Text="Turn time limit" Component="turn-limit" />
-                            </RadzenStack>
-                            @if (useTurnLimit)
+                            <div class="switch-grid field-wide">
+                            <div class="field-inline">
+                                <RadzenSwitch @bind-Value="@ForcedCaptures" Name="forced-captures" />
+                                <RadzenLabel Text="Forced captures" Component="forced-captures" />
+                            </div>
+                            <div class="field-inline">
+                                <RadzenSwitch @bind-Value="@MenCaptureBackward" Name="men-backward" />
+                                <RadzenLabel Text="Men capture backwards" Component="men-backward" />
+                            </div>
+                            <div class="field-inline">
+                                <RadzenSwitch @bind-Value="@MenCanCaptureKings" Name="men-kings" />
+                                <RadzenLabel Text="Men can capture kings" Component="men-kings" />
+                            </div>
+                            <div class="field-inline">
+                                <RadzenSwitch @bind-Value="@RemoveCapturedAtEndOfMove" Name="remove-end" />
+                                <RadzenLabel Text="Captured pieces stay until the move ends" Component="remove-end" />
+                            </div>
+                            <div class="field-inline">
+                                <RadzenSwitch @bind-Value="@FlyingKings" Name="flying-kings" />
+                                <RadzenLabel Text="Flying kings" Component="flying-kings" />
+                            </div>
+                            @if (FlyingKings)
                             {
-                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                                    <RadzenNumeric @bind-Value="@turnLimitAmount" TValue="int" Min="1" Style="width: 7rem;" aria-label="Turn time limit amount" />
-                                    <RadzenDropDown @bind-Value="@turnLimitUnitSeconds" TValue="int" Data="@TurnLimitUnits"
-                                                    TextProperty="@nameof(TurnLimitUnit.Name)" ValueProperty="@nameof(TurnLimitUnit.Seconds)"
-                                                    Style="width: 8rem;" aria-label="Turn time limit unit" />
-                                </RadzenStack>
-                                <RadzenText TextStyle="TextStyle.Caption">
-                                    Anywhere from 30 seconds to 1 week. A player who doesn't finish their turn in time automatically resigns.
-                                </RadzenText>
-                                @if (TurnLimitError is { } limitError)
-                                {
-                                    <RadzenText TextStyle="TextStyle.Caption" Style="color: var(--rz-danger);">@limitError</RadzenText>
-                                }
+                                <div class="field-inline">
+                                    <RadzenSwitch @bind-Value="@KingStopsBehindCapture" Name="king-stops" />
+                                    <RadzenLabel Text="King lands right behind a capture" Component="king-stops" />
+                                </div>
                             }
-                        </RadzenStack>
-                    </RadzenStack>
-                </RadzenFieldset>
-                <RadzenButton Text="@(vsComputer ? "Play the computer" : "Create match")" Icon="@(vsComputer ? "smart_toy" : "add")"
-                              Disabled="@(busy || TurnLimitError is not null)" Click="@CreateMatch" />
-            </RadzenStack>
-            <RadzenStack Gap="0.5rem">
-                <p>Or enter the code your opponent gave you.</p>
-                <RadzenTextBox @bind-Value="@joinCode" Immediate="true" Placeholder="Match code" MaxLength="6" aria-label="Match code" />
-                <RadzenButton Text="Join match" Icon="login" ButtonStyle="ButtonStyle.Secondary" Disabled="@(busy || string.IsNullOrWhiteSpace(joinCode))" Click="@JoinMatch" />
-            </RadzenStack>
-        </RadzenStack>
+                            </div>
+                            <RadzenText TextStyle="TextStyle.Caption" class="field-note field-wide editor-note">
+                                Multi-jumps that have started must always be finished. <RadzenLink Path="rules" Text="What do these rules mean?" />
+                            </RadzenText>
+                        </div>
+                    }
+                </div>
+
+                <div class="setup-panel-foot">
+                    <RadzenButton Text="@(vsComputer ? "Play the computer" : "Create match")" Icon="@(vsComputer ? "smart_toy" : "add")"
+                                  Disabled="@(busy || TurnLimitError is not null)" Click="@CreateMatch" />
+                    <span class="setup-summary">@MatchTimeText.DescribeRules(rules, useTurnLimit && TurnLimitError is null ? (int)TurnLimitSeconds : null)</span>
+                </div>
+            </section>
+
+            <section class="setup-panel join-panel" aria-labelledby="join-match">
+                <h2 id="join-match">Join a match</h2>
+                <p>Enter the code your opponent gave you.</p>
+                <div class="join-row">
+                    <RadzenTextBox @bind-Value="@joinCode" Immediate="true" Placeholder="Match code" MaxLength="6" aria-label="Match code" Style="flex: 1; min-width: 0;" />
+                    <RadzenButton Text="Join" Icon="login" ButtonStyle="ButtonStyle.Secondary" Disabled="@(busy || string.IsNullOrWhiteSpace(joinCode))" Click="@JoinMatch" />
+                </div>
+            </section>
+        </div>
     }
     else
     {
