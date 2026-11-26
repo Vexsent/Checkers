@@ -13,6 +13,8 @@ namespace Checkers.Client.Extensions
 		public static IServiceCollection AddClientServices(this IServiceCollection services)
 		{
 			services.AddScoped<IUserAuthenticationServices, UserAuthenticationServices>();
+			services.AddScoped<IRelayService, RelayService>();
+			services.AddScoped<IMatchHistoryServices, MatchHistoryServices>();
 
 			//Auth: one JwtAuthStateProvider instance serves both its concrete type (for login/logout)
 			//and AuthenticationStateProvider (for AuthorizeView / AuthorizeRouteView).
@@ -20,6 +22,9 @@ namespace Checkers.Client.Extensions
 			services.AddCascadingAuthenticationState();
 			services.AddScoped<JwtAuthStateProvider>();
 			services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<JwtAuthStateProvider>());
+
+			//Live matches
+			services.AddScoped<IGameSessionServices, GameSessionServices>();
 
 			return services;
 		}

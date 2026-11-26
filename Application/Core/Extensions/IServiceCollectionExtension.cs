@@ -1,10 +1,13 @@
 ﻿using Checkers.Application.Core.Authorization;
+using Checkers.Application.Core.MatchHistory;
 using Checkers.Application.Core.Options;
 using Checkers.Application.Core.Repositories;
 using Checkers.Application.Core.Security;
 using Checkers.Application.Core.Services;
+using Checkers.Application.Core.Sessions;
 using Checkers.Persistence.Data.DataContext;
 using Checkers.Persistence.Data.IRepositories;
+using Checkers.Shared.GameModels;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -26,7 +29,12 @@ namespace Checkers.Application.Core.Extensions
 
 			services.AddDbContext<CheckersContext>(options =>
 			{
-				options.UseSqlServer(resolved);
+				// The SQL Server is remote, so a pooled connection can be dropped by the server or the
+				// network while idle. Retrying lets EF open a fresh connection instead of failing the request.
+				options.UseSqlServer(resolved, sql => sql.EnableRetryOnFailure(
+					maxRetryCount: 5,
+					maxRetryDelay: TimeSpan.FromSeconds(10),
+					errorNumbersToAdd: null));
 			});
 
 			return services;
@@ -57,6 +65,16 @@ namespace Checkers.Application.Core.Extensions
 		public static IServiceCollection AddRepositories(this IServiceCollection services)
 		{
 			services.AddScoped<IUserRepository, UserRepository>();
+			services.AddScoped<IMatchRecordRepository, MatchRecordRepository>();
+			return services;
+		}
+
+		/// <summary>
+		/// Registers the match history service. It depends on the repositories, so call AddRepositories too.
+		/// </summary>
+		public static IServiceCollection AddMatchHistoryServices(this IServiceCollection services)
+		{
+			services.AddScoped<IMatchHistoryService, MatchHistoryService>();
 			return services;
 		}
 
@@ -75,6 +93,21 @@ namespace Checkers.Application.Core.Extensions
 			return services;
 		}
 
+
+		/// <summary>
+		/// Registers live match sessions. The rules and session manager are singletons because matches
+		/// live in memory; the recorder is scoped because it saves through the match history service,
+		/// so call AddMatchHistoryServices too.
+		/// </summary>
+		public static IServiceCollection AddGameSessions(this IServiceCollection services)
+		{
+			services.AddSingleton<IGameRules, CheckersGameRules>();
+			// Turn time limits read the clock through this, so tests can control time.
+			services.AddSingleton(TimeProvider.System);
+			services.AddSingleton<IGameSessionManager, GameSessionManager>();
+			services.AddScoped<IFinishedMatchRecorder, FinishedMatchRecorder>();
+			return services;
+		}
 
 		public static IServiceCollection AddOptions(this IServiceCollection services, IConfiguration configuration)
 		{

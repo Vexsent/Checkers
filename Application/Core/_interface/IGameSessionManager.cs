@@ -1,0 +1,60 @@
+using Checkers.Shared.DTOs;
+using Checkers.Shared.GameModels;
+
+namespace Checkers.Application.Core.Services
+{
+	public interface IGameSessionManager
+	{
+		/// <summary>
+		/// Starts a match with the creator's settings (standard rules as black, no time limit, if
+		/// none are given) and returns its shareable code.
+		/// </summary>
+		SessionResult Create(int userId, string username, MatchSettingsDto? settings = null);
+		/// <summary>
+		/// Takes the open seat, or returns the current state if the user is already a player.
+		/// </summary>
+		SessionResult Join(string matchCode, int userId, string username);
+		SessionResult MakeMove(string matchCode, int userId, GameMove move);
+		SessionResult Resign(string matchCode, int userId);
+		/// <summary>
+		/// Offers the opponent a draw. Only one offer can be open, and any move withdraws it.
+		/// </summary>
+		SessionResult OfferDraw(string matchCode, int userId);
+		/// <summary>
+		/// Accepts (ending the match as a draw) or declines the opponent's open draw offer.
+		/// </summary>
+		SessionResult AnswerDraw(string matchCode, int userId, bool accept);
+		/// <summary>
+		/// Codes of the unfinished matches the user is playing in.
+		/// </summary>
+		IReadOnlyList<string> GetActiveMatchCodes(int userId);
+		/// <summary>
+		/// The unfinished matches the user is playing in, from their side, most recently started
+		/// first, with matches still waiting for an opponent at the end.
+		/// </summary>
+		IReadOnlyList<ActiveMatchDto> GetActiveMatches(int userId);
+		/// <summary>
+		/// Ends every match whose current turn has run past its time limit: the player whose turn
+		/// it was resigns. Returns those matches so they can be saved and sent to the players.
+		/// </summary>
+		IReadOnlyList<GameSessionDto> ExpireOverdueTurns();
+		/// <summary>
+		/// Matches where the computer has something to do: it's the computer's turn, or the player
+		/// has offered it a draw.
+		/// </summary>
+		IReadOnlyList<GameSessionDto> GetMatchesAwaitingComputer();
+		/// <summary>
+		/// Plays one step for the computer's side.
+		/// </summary>
+		SessionResult MakeComputerMove(string matchCode, GameMove move);
+		/// <summary>
+		/// Answers the player's draw offer on the computer's behalf.
+		/// </summary>
+		SessionResult AnswerDrawForComputer(string matchCode, bool accept);
+		/// <summary>
+		/// True the first time it's called for a finished match and false after that, so a match
+		/// that both players finish at once is still saved only once.
+		/// </summary>
+		bool TryClaimRecording(string matchCode);
+	}
+}

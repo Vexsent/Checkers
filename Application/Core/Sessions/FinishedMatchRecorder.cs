@@ -1,0 +1,62 @@
+using Checkers.Application.Core.Services;
+using Checkers.Shared.DTOs;
+using Checkers.Shared.Enums;
+
+namespace Checkers.Application.Core.Sessions
+{
+	/// <summary>
+	/// Turns a finished live match into a match record (User Story 12). The server saves it, not
+	/// the clients, so a game is saved once no matter which player's move or resignation ended it.
+	/// </summary>
+	public class FinishedMatchRecorder(
+		IGameSessionManager sessions,
+		IMatchHistoryService matchHistory) : IFinishedMatchRecorder
+	{
+		public async Task<RecordMatchResult?> RecordIfFinishedAsync(GameSessionDto session)
+		{
+			// Each side is a person or the computer (saved with no player id); one side must be a person.
+			var blackIsComputer = session.ComputerColor == PlayerColor.Black;
+			var whiteIsComputer = session.ComputerColor == PlayerColor.White;
+			if (session.Status != SessionStatus.Finished
+				|| (session.BlackPlayerId is null && !blackIsComputer)
+				|| (session.WhitePlayerId is null && !whiteIsComputer)
+				|| (session.BlackPlayerId ?? session.WhitePlayerId) is not int humanId
+				|| session.StartedAtUtc is not DateTime startedAtUtc
+				|| session.EndedAtUtc is not DateTime endedAtUtc
+				|| ToMatchResult(session.Outcome) is not MatchResult result)
+				return null;
+
+			if (!sessions.TryClaimRecording(session.MatchCode))
+				return null;
+
+			var request = new RecordMatchRequestDto
+			{
+				BlackPlayerId = session.BlackPlayerId,
+				WhitePlayerId = session.WhitePlayerId,
+				Result = result,
+				StartedAtUtc = startedAtUtc,
+				EndedAtUtc = endedAtUtc,
+				Moves = session.Moves.Select(m => new MatchMoveDto
+				{
+					FromRow = m.FromRow,
+					FromCol = m.FromCol,
+					ToRow = m.ToRow,
+					ToCol = m.ToCol,
+				}).ToList(),
+				Rules = session.Rules,
+				TurnTimeLimitSeconds = session.TurnTimeLimitSeconds,
+				ComputerDifficulty = session.ComputerDifficulty,
+			};
+
+			return await matchHistory.RecordMatchAsync(humanId, request);
+		}
+
+		private static MatchResult? ToMatchResult(GameOutcome outcome) => outcome switch
+		{
+			GameOutcome.BlackWon => MatchResult.BlackWin,
+			GameOutcome.WhiteWon => MatchResult.WhiteWin,
+			GameOutcome.Draw => MatchResult.Draw,
+			_ => null,
+		};
+	}
+}

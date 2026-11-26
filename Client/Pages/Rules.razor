@@ -1,0 +1,220 @@
+@page "/rules"
+@using Checkers.Shared.Enums
+@using Checkers.Shared.GameModels
+
+<PageTitle>Rules &amp; Variants</PageTitle>
+
+<div class="rules-page">
+    <h1>Rules &amp; Variants</h1>
+    <p class="lead">
+        Checkers is played around the world under different rules. When you create a match you pick a
+        <strong>game type</strong> (a preset of rules for one national variant) and can change any single rule under
+        <em>Customize rules</em>. This page explains each variant and what every rule does.
+    </p>
+
+    <section aria-labelledby="basics">
+        <h2 id="basics">The basics (every variant)</h2>
+        <ul>
+            <li>The board is checkered and only the dark squares are used. Black starts at the top, White at the bottom.</li>
+            <li><strong>Men</strong> move one square diagonally forwards, onto an empty square.</li>
+            <li>You <strong>capture</strong> by jumping diagonally over an opponent's piece onto the empty square beyond it. The jumped piece is removed.</li>
+            <li>If the piece that just captured can capture again, it keeps going in the same turn: a <strong>multi-jump</strong>. Once a multi-jump has started it must be finished.</li>
+            <li>A man that reaches the far row is <strong>crowned</strong> and becomes a <strong>king</strong>. Kings move and capture backwards as well as forwards.</li>
+            <li>You <strong>win</strong> when your opponent has no legal move, either because they have no pieces left or because every piece is blocked.</li>
+            <li>You can also win when your opponent <strong>resigns</strong> or runs out of time, and the game is a <strong>draw</strong> if both players agree to one.</li>
+        </ul>
+    </section>
+
+    <section aria-labelledby="compare">
+        <h2 id="compare">The variants at a glance</h2>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Variant comparison, scrolls sideways">
+            <table class="compare">
+                <thead>
+                    <tr>
+                        <th scope="col">Variant</th>
+                        <th scope="col">Board</th>
+                        <th scope="col">Men each</th>
+                        <th scope="col">First</th>
+                        <th scope="col">Captures</th>
+                        <th scope="col">Which capture</th>
+                        <th scope="col">Men capture backwards</th>
+                        <th scope="col">Men take kings</th>
+                        <th scope="col">Kings</th>
+                        <th scope="col">Crowned mid-capture</th>
+                        <th scope="col">Captured pieces removed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var preset in GameVariants.All)
+                    {
+                        var r = preset.Rules;
+                        <tr>
+                            <th scope="row">@preset.Name</th>
+                            <td>@r.BoardSize × @r.BoardSize</td>
+                            <td>@r.PiecesPerSide</td>
+                            <td>@r.FirstPlayer</td>
+                            <td>@(r.ForcedCaptures ? "Forced" : "Optional")</td>
+                            <td>@CaptureChoiceShort(r.CaptureChoice)</td>
+                            <td>@YesNo(r.MenCaptureBackward)</td>
+                            <td>@YesNo(r.MenCanCaptureKings)</td>
+                            <td>@KingsShort(r)</td>
+                            <td>@PromotionShort(r.PromotionDuringCapture)</td>
+                            <td>@(r.RemoveCapturedAtEndOfMove ? "After the move" : "At once")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section aria-labelledby="rules">
+        <h2 id="rules">What each rule does</h2>
+
+        <article class="rule">
+            <h3>Board size and rows of men</h3>
+            <p>
+                Most variants use an 8 × 8 board with 3 rows of men each (12 men a side). International draughts uses
+                10 × 10 with 4 rows (20 men), Canadian uses 12 × 12 with 5 rows (30 men), and Thai uses the 8 × 8 board
+                with only 2 rows (8 men). The two middle rows always start empty.
+            </p>
+        </article>
+
+        <article class="rule">
+            <h3>Who moves first</h3>
+            <p>
+                American checkers starts with Black; most European variants start with White. Black always sits at the top
+                of the board and moves down, White at the bottom moving up, whoever goes first.
+            </p>
+        </article>
+
+        <article class="rule">
+            <h3>Forced captures</h3>
+            <dl>
+                <dt>On (every preset except Casual)</dt>
+                <dd>If you can capture, you must. A move that doesn't capture is refused while a capture is available.</dd>
+                <dt>Off (Casual)</dt>
+                <dd>Capturing is optional, so you may make an ordinary move instead. Once you start a multi-jump you must still finish it.</dd>
+            </dl>
+        </article>
+
+        <article class="rule">
+            <h3>Which capture you must take</h3>
+            <p>When more than one capture is possible, this decides which ones you're allowed to choose.</p>
+            <dl>
+                <dt>Any capture</dt>
+                <dd>Choose any capture you like, as long as you carry it through to the end. (American, Russian, Pool, Thai)</dd>
+                <dt>Most pieces</dt>
+                <dd>You must take the capture that removes the most pieces. Men and kings count the same. (International, Brazilian, Canadian)</dd>
+                <dt>Most pieces, then most kings</dt>
+                <dd>The most pieces first; if two captures take the same number, the one that takes more kings. (Spanish)</dd>
+                <dt>Italian priority</dt>
+                <dd>
+                    In order: the most pieces; then capturing with a king rather than a man; then the most kings taken;
+                    then the capture that takes a king soonest. (Italian)
+                </dd>
+                <dt>Kings capture first</dt>
+                <dd>If any of your kings can capture, you must capture with a king; otherwise any capture. (Czech)</dd>
+            </dl>
+        </article>
+
+        <article class="rule">
+            <h3>Men capturing backwards</h3>
+            <p>
+                Men always <em>move</em> forwards only. In Russian, Pool, Brazilian, International and Canadian draughts they
+                may also <em>capture</em> backwards, which makes multi-jumps that zig-zag back down the board possible.
+            </p>
+        </article>
+
+        <article class="rule">
+            <h3>Men capturing kings</h3>
+            <p>
+                Normally a man can capture any piece. In Italian draughts a man can't jump a king: only a king can capture a king.
+            </p>
+        </article>
+
+        <article class="rule">
+            <h3>Flying kings</h3>
+            <dl>
+                <dt>Off (American, Italian)</dt>
+                <dd>Kings move one square diagonally, in any direction, and capture by jumping an adjacent piece.</dd>
+                <dt>On (most other variants)</dt>
+                <dd>
+                    Kings move any number of empty squares along a diagonal, like a bishop in chess. They can capture a piece
+                    any distance away along the diagonal and land on any empty square beyond it.
+                </dd>
+                <dt>Land right behind the capture (Thai)</dt>
+                <dd>A flying king still captures from a distance, but must land on the square directly behind the captured piece.</dd>
+            </dl>
+        </article>
+
+        <article class="rule">
+            <h3>Reaching the far row in the middle of a capture</h3>
+            <dl>
+                <dt>Crowned, and the move ends (American, Spanish, Italian, Czech, Thai)</dt>
+                <dd>The man becomes a king, and the move stops there even if the new king could capture again.</dd>
+                <dt>Crowned, and keeps capturing as a king (Russian)</dt>
+                <dd>The man becomes a king on the spot and carries on its multi-jump with the king's powers.</dd>
+                <dt>Keeps capturing as a man (International, Brazilian, Canadian, Pool)</dt>
+                <dd>
+                    The man carries on capturing as a man. It's only crowned if its move ends on the far row; if it jumps
+                    back out again, it stays a man.
+                </dd>
+            </dl>
+        </article>
+
+        <article class="rule">
+            <h3>When captured pieces come off the board</h3>
+            <dl>
+                <dt>At once (American, Italian, Thai)</dt>
+                <dd>Each piece is removed as soon as it's jumped.</dd>
+                <dt>After the move (most flying-king variants)</dt>
+                <dd>
+                    Captured pieces stay on the board until the whole multi-jump is finished. They still block the way, and
+                    the same piece can't be jumped twice in one move. This matters most for flying kings, which could
+                    otherwise loop back across a square they've already cleared.
+                </dd>
+            </dl>
+        </article>
+
+        <article class="rule">
+            <h3>Turn time limit</h3>
+            <p>
+                Separate from the variant, a match can have a turn time limit anywhere from 30 seconds to 1 week. The clock
+                starts when your opponent joins and restarts each time the turn passes. It keeps running through a
+                multi-jump and doesn't pause if you disconnect. A player who doesn't finish their turn in time
+                automatically resigns.
+            </p>
+        </article>
+    </section>
+
+    <section aria-labelledby="variants">
+        <h2 id="variants">The variants</h2>
+        <div class="variant-grid">
+            @foreach (var preset in GameVariants.All)
+            {
+                <RadzenCard Variant="Variant.Outlined" class="variant-card">
+                    <h3>@preset.Name</h3>
+                    <p>@preset.Description</p>
+                    <ul class="variant-rules">
+                        @foreach (var detail in Details(preset.Rules))
+                        {
+                            <li>@detail</li>
+                        }
+                    </ul>
+                    <RadzenButton Text="Play this variant" Icon="sports_esports" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Secondary"
+                                  Click="@(() => Play(preset.Variant))" />
+                </RadzenCard>
+            }
+        </div>
+    </section>
+
+    <section aria-labelledby="not-covered">
+        <h2 id="not-covered">Not covered (yet)</h2>
+        <p>
+            Some variants have extra draw rules: a stronger side must win within a set number of moves, or the game is drawn
+            when the same position repeats three times. These aren't applied here; a draw is only by agreement. Spanish and
+            Italian draughts are traditionally played with the board turned the other way, and Italian men may capture at
+            most three pieces in a row; neither is applied. Turkish draughts, where pieces move in straight lines, isn't offered.
+        </p>
+    </section>
+</div>

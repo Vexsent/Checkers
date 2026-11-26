@@ -1,7 +1,8 @@
-/* Scales to the smaller of the viewport's width/height so the board fits phones and desktops. */
+/* Scales to the smaller of the viewport's width/height so the board fits phones and desktops.
+   A page can size it to its own space instead by setting --board-size (the match page does). */
 .board {
     display: grid;
-    width: min(90vw, 80vh);
+    width: var(--board-size, min(90vw, 80vh));
     aspect-ratio: 1 / 1;
     margin: 0 auto;
     border: 2px solid #333;
@@ -28,4 +29,54 @@
     height: 80%;
     object-fit: contain;
     image-rendering: pixelated;
+}
+
+.selected-square {
+    box-shadow: inset 0 0 0 4px #f5c518;
+}
+
+/* Empty squares the selected piece can move to. */
+.legal-move {
+    background-image: radial-gradient(circle, rgba(245, 197, 24, 0.85) 18%, transparent 20%);
+}
+
+/* A square the player tried to use illegally: a short red flash instead of a message. */
+.rejected-square {
+    animation: rejected-flash 0.9s ease-out;
+}
+
+@keyframes rejected-flash {
+    0%, 35% {
+        box-shadow: inset 0 0 0 4px #d32f2f;
+        background-color: rgba(211, 47, 47, 0.55);
+    }
+
+    100% {
+        box-shadow: inset 0 0 0 4px rgba(211, 47, 47, 0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rejected-square {
+        animation: none;
+        box-shadow: inset 0 0 0 4px #d32f2f;
+    }
+}
+
+/* Hints after repeated illegal tries: pieces that can move, and where they can go. */
+.hint-piece {
+    box-shadow: inset 0 0 0 4px #2e9d4f;
+}
+
+.hint-target {
+    background-image: radial-gradient(circle, rgba(46, 157, 79, 0.85) 18%, transparent 20%);
+}
+
+/* The selected piece's own moves keep the usual gold marks on top of a hint. */
+.selected-square.hint-piece {
+    box-shadow: inset 0 0 0 4px #f5c518;
+}
+
+.legal-move.hint-target {
+    background-image: radial-gradient(circle, rgba(245, 197, 24, 0.85) 18%, transparent 20%);
 }

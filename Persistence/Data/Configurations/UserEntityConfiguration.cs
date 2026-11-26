@@ -8,9 +8,10 @@ namespace Checkers.Persistence.Data.Configurations
 	{
 		public void Configure(EntityTypeBuilder<User> builder)
 		{
-			builder.ToTable("Users");
+			builder.ToTable("Users", o => o.ExcludeFromMigrations());
 			
-			builder.HasKey(k => k.Id);
+			builder.HasKey(k => k.Id)
+				.HasName("PK_Users_Id");
 
 			builder.Property(p => p.Id)
 				.IsRequired();

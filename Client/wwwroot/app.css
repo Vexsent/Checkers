@@ -138,3 +138,11 @@ h1:focus {
         padding-left: env(safe-area-inset-left);
     }
 }
+
+/* Phones (narrow, or short when held sideways): the footer is only a copyright line, and the
+   match and create screens need its height more. */
+@media (max-height: 600px), (max-width: 760px) {
+    .rz-footer {
+        display: none;
+    }
+}

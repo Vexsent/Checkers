@@ -1,0 +1,105 @@
+# Builds the MAUI client for Android and Windows and uploads the results as workflow artifacts
+# (Actions tab -> run -> Artifacts), so testers can grab a build without a local MAUI setup.
+#
+#   push to main     -> Release build packaged with the Production settings
+#   push to Staging  -> Release build packaged with the Staging settings
+#   pull requests    -> same builds (Staging settings), to check the client still compiles
+#
+#   Android -> APK, signed with the SDK's debug key (fine for sideloading, not for the Play Store)
+#   Windows -> self-contained, unpackaged x64 folder; run Client.exe
+#
+# iOS and Mac Catalyst aren't built here yet; they're planned for a self-hosted Mac runner later.
+#
+# Only client-side changes trigger it; the server has its own Docker image workflow.
+name: Client apps
+
+on:
+  push:
+    branches: [main, Staging]
+    paths:
+      - "Shared/**"
+      - "Client/**"
+      - ".github/workflows/client-apps.yml"
+  pull_request:
+    branches: [main, Staging]
+    paths:
+      - "Shared/**"
+      - "Client/**"
+      - ".github/workflows/client-apps.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: client-apps-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  PROJECT: Client/Client.csproj
+  # main ships Production settings; everything else (Staging, PRs, manual runs) ships Staging settings
+  APP_ENVIRONMENT: ${{ github.ref == 'refs/heads/main' && 'Production' || 'Staging' }}
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: microsoft
+          java-version: "21"
+
+      - name: Install MAUI workloads
+        run: dotnet workload restore ${{ env.PROJECT }}
+
+      - name: Publish APK
+        run: >
+          dotnet publish ${{ env.PROJECT }}
+          -f net10.0-android -c Release
+          -p:AppEnvironment=${{ env.APP_ENVIRONMENT }}
+          -p:AndroidPackageFormats=apk
+          -o artifacts/android
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: checkers-android-${{ env.APP_ENVIRONMENT }}
+          path: artifacts/android/*-Signed.apk
+          if-no-files-found: error
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install MAUI workloads
+        run: dotnet workload restore ${{ env.PROJECT }}
+
+      - name: Publish unpackaged app
+        run: >
+          dotnet publish ${{ env.PROJECT }}
+          -f net10.0-windows10.0.19041.0 -c Release
+          -p:AppEnvironment=${{ env.APP_ENVIRONMENT }}
+          -p:RuntimeIdentifierOverride=win-x64
+          -p:WindowsPackageType=None
+          -p:SelfContained=true
+          -p:WindowsAppSDKSelfContained=true
+          -o artifacts/windows
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: checkers-windows-x64-${{ env.APP_ENVIRONMENT }}
+          path: artifacts/windows
+          if-no-files-found: error
