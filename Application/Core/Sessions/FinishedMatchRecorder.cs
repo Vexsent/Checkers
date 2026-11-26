@@ -15,6 +15,7 @@ namespace Checkers.Application.Core.Sessions
 		public async Task<RecordMatchResult?> RecordIfFinishedAsync(GameSessionDto session)
 		{
 			if (session.Status != SessionStatus.Finished
+				|| session.BlackPlayerId is not int blackPlayerId
 				|| session.WhitePlayerId is not int whitePlayerId
 				|| session.StartedAtUtc is not DateTime startedAtUtc
 				|| session.EndedAtUtc is not DateTime endedAtUtc
@@ -26,7 +27,7 @@ namespace Checkers.Application.Core.Sessions
 
 			var request = new RecordMatchRequestDto
 			{
-				BlackPlayerId = session.BlackPlayerId,
+				BlackPlayerId = blackPlayerId,
 				WhitePlayerId = whitePlayerId,
 				Result = result,
 				StartedAtUtc = startedAtUtc,
@@ -38,9 +39,11 @@ namespace Checkers.Application.Core.Sessions
 					ToRow = m.ToRow,
 					ToCol = m.ToCol,
 				}).ToList(),
+				Rules = session.Rules,
+				TurnTimeLimitSeconds = session.TurnTimeLimitSeconds,
 			};
 
-			return await matchHistory.RecordMatchAsync(session.BlackPlayerId, request);
+			return await matchHistory.RecordMatchAsync(blackPlayerId, request);
 		}
 
 		private static MatchResult? ToMatchResult(GameOutcome outcome) => outcome switch

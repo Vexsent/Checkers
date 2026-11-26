@@ -23,6 +23,7 @@
             <h1>Match Replay</h1>
             <div>Black: @match.BlackPlayerName@(match.PlayedAs == "Black" ? " (you)" : "") · White: @match.WhitePlayerName@(match.PlayedAs == "White" ? " (you)" : "")</div>
             <div>@match.EndedAtUtc.ToLocalTime().ToString("g") · <RadzenBadge BadgeStyle="@OutcomeStyle" Text="@match.Outcome.ToString()" /></div>
+            <div class="replay-rules">@MatchTimeText.DescribeRules(match.Rules, match.TurnTimeLimitSeconds)</div>
         </div>
 
         @if (!replay.IsExact)

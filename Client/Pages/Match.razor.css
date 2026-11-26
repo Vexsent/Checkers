@@ -60,3 +60,19 @@
     padding-left: 2rem;
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
 }
+
+.match-rules {
+    margin-top: 0.25rem;
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+.turn-clock {
+    margin-top: 0.25rem;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-weight: 600;
+}
+
+.turn-clock-low {
+    color: var(--rz-danger);
+}

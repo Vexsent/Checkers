@@ -1,3 +1,5 @@
+using Checkers.Shared.GameModels;
+
 namespace Checkers.Shared.DTOs
 {
 	/// <summary>
@@ -18,5 +20,10 @@ namespace Checkers.Shared.DTOs
 		/// Every step in the order it was played. A multi-jump is one entry per jump.
 		/// </summary>
 		public List<MatchMoveDto> Moves { get; set; } = [];
+		/// <summary>
+		/// The rule variations the match was played with. The replay must use the same ones.
+		/// </summary>
+		public GameRuleOptions Rules { get; set; } = GameRuleOptions.Standard;
+		public int? TurnTimeLimitSeconds { get; set; }
 	}
 }

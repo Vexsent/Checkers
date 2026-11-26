@@ -74,3 +74,9 @@
     background: var(--rz-primary-lighter, #dbe7ff);
     font-weight: 700;
 }
+
+.replay-rules {
+    margin-top: 0.25rem;
+    font-size: 0.9rem;
+    opacity: 0.8;
+}

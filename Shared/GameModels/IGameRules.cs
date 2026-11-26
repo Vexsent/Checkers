@@ -8,7 +8,7 @@ namespace Checkers.Shared.GameModels
 	/// </summary>
 	public interface IGameRules
 	{
-		IRulesGame NewGame();
+		IRulesGame NewGame(GameRuleOptions rules);
 	}
 
 	/// <summary>

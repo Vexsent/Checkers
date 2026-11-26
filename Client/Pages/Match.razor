@@ -14,7 +14,60 @@
         <RadzenStack Gap="1.5rem">
             <RadzenStack Gap="0.5rem">
                 <p>Start a match and share its code with your opponent.</p>
-                <RadzenButton Text="Create match" Icon="add" Disabled="@busy" Click="@CreateMatch" />
+                <RadzenFieldset Text="Match settings">
+                    <RadzenStack Gap="1rem">
+                        <RadzenStack Gap="0.25rem">
+                            <RadzenLabel Text="Play as" Component="creator-color" />
+                            <RadzenSelectBar @bind-Value="@creatorColor" TValue="ColorChoice" Name="creator-color" Size="ButtonSize.Small">
+                                <Items>
+                                    <RadzenSelectBarItem Text="Black (moves first)" Value="ColorChoice.Black" />
+                                    <RadzenSelectBarItem Text="White" Value="ColorChoice.White" />
+                                    <RadzenSelectBarItem Text="Random" Value="ColorChoice.Random" />
+                                </Items>
+                            </RadzenSelectBar>
+                        </RadzenStack>
+
+                        <RadzenStack Gap="0">
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                                <RadzenSwitch @bind-Value="@forcedCaptures" Name="forced-captures" />
+                                <RadzenLabel Text="Forced captures" Component="forced-captures" />
+                            </RadzenStack>
+                            <RadzenText TextStyle="TextStyle.Caption">@(forcedCaptures ? "A player who can capture must." : "Capturing is optional, but a multi-jump that's started must be finished.")</RadzenText>
+                        </RadzenStack>
+
+                        <RadzenStack Gap="0">
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                                <RadzenSwitch @bind-Value="@flyingKings" Name="flying-kings" />
+                                <RadzenLabel Text="Flying kings" Component="flying-kings" />
+                            </RadzenStack>
+                            <RadzenText TextStyle="TextStyle.Caption">@(flyingKings ? "Kings move and capture any distance along a diagonal." : "Kings move one square at a time, forwards or backwards.")</RadzenText>
+                        </RadzenStack>
+
+                        <RadzenStack Gap="0.25rem">
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                                <RadzenSwitch @bind-Value="@useTurnLimit" Name="turn-limit" />
+                                <RadzenLabel Text="Turn time limit" Component="turn-limit" />
+                            </RadzenStack>
+                            @if (useTurnLimit)
+                            {
+                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                                    <RadzenNumeric @bind-Value="@turnLimitAmount" TValue="int" Min="1" Style="width: 7rem;" aria-label="Turn time limit amount" />
+                                    <RadzenDropDown @bind-Value="@turnLimitUnitSeconds" TValue="int" Data="@TurnLimitUnits"
+                                                    TextProperty="@nameof(TurnLimitUnit.Name)" ValueProperty="@nameof(TurnLimitUnit.Seconds)"
+                                                    Style="width: 8rem;" aria-label="Turn time limit unit" />
+                                </RadzenStack>
+                                <RadzenText TextStyle="TextStyle.Caption">
+                                    Anywhere from 30 seconds to 1 week. A player who doesn't finish their turn in time automatically resigns.
+                                </RadzenText>
+                                @if (TurnLimitError is { } limitError)
+                                {
+                                    <RadzenText TextStyle="TextStyle.Caption" Style="color: var(--rz-danger);">@limitError</RadzenText>
+                                }
+                            }
+                        </RadzenStack>
+                    </RadzenStack>
+                </RadzenFieldset>
+                <RadzenButton Text="Create match" Icon="add" Disabled="@(busy || TurnLimitError is not null)" Click="@CreateMatch" />
             </RadzenStack>
             <RadzenStack Gap="0.5rem">
                 <p>Or enter the code your opponent gave you.</p>
@@ -28,8 +81,16 @@
         <div class="match-header">
             <div>
                 <div class="match-code">Match code: <strong>@Session.MatchCode</strong></div>
-                <div>Black: @Session.BlackPlayerName@(MyColor == PlayerColor.Black ? " (you)" : "") · White: @(Session.WhitePlayerName ?? "waiting…")@(MyColor == PlayerColor.White && Session.WhitePlayerId is not null ? " (you)" : "")</div>
+                <div>Black: @(Session.BlackPlayerName ?? "waiting…")@(Session.BlackPlayerId == myUserId ? " (you)" : "") · White: @(Session.WhitePlayerName ?? "waiting…")@(Session.WhitePlayerId == myUserId ? " (you)" : "")</div>
+                <div class="match-rules">@MatchTimeText.DescribeRules(Session.Rules, Session.TurnTimeLimitSeconds)</div>
                 <div class="match-status">@StatusText</div>
+                @if (Session.Status == SessionStatus.InProgress && Session.TurnDeadlineUtc is { } deadline)
+                {
+                    var remaining = deadline - DateTime.UtcNow;
+                    <div class="@(remaining < TimeSpan.FromSeconds(10) ? "turn-clock turn-clock-low" : "turn-clock")" role="timer" aria-live="off">
+                        @(IsMyTurn ? "Your time left" : "Opponent's time left"): @MatchTimeText.Remaining(remaining)
+                    </div>
+                }
                 @if (Session.Status == SessionStatus.Finished)
                 {
                     <RadzenLink Path="match-history" Text="See this game in your match history" />

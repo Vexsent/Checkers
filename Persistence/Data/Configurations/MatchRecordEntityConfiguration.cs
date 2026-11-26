@@ -47,11 +47,25 @@ namespace Checkers.Persistence.Data.Configurations
 
 			builder.Property(p => p.StartedAtUtc)
 				.IsRequired()
-				.HasColumnName("Started_At_Utc");
+				.HasColumnName("Start_At_Utc");
 
 			builder.Property(p => p.EndedAtUtc)
 				.IsRequired()
-				.HasColumnName("Ended_At_Utc");
+				.HasColumnName("End_At_Utc");
+
+			// Rule variations, so a saved match replays with the rules it was played with. The table's
+			// column defaults (standard rules) cover rows saved before these columns existed. No
+			// HasDefaultValue here: with a store default of true, EF would never send false.
+			builder.Property(p => p.ForcedCaptures)
+				.IsRequired()
+				.HasColumnName("Forced_Captures");
+
+			builder.Property(p => p.FlyingKings)
+				.IsRequired()
+				.HasColumnName("Flying_Kings");
+
+			builder.Property(p => p.TurnTimeLimitSeconds)
+				.HasColumnName("Turn_Time_Limit_Seconds");
 
 			builder.HasMany(m => m.Moves)
 				.WithOne()

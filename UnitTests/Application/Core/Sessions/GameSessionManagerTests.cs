@@ -359,7 +359,7 @@ namespace UnitTests.Application.Core.Sessions
 		/// </summary>
 		private sealed class ScriptedRules(PlayerColor nextPlayer, GameOutcome outcome) : IGameRules
 		{
-			public IRulesGame NewGame() => new ScriptedGame(nextPlayer, outcome);
+			public IRulesGame NewGame(GameRuleOptions rules) => new ScriptedGame(nextPlayer, outcome);
 
 			private sealed class ScriptedGame(PlayerColor nextPlayer, GameOutcome outcome) : IRulesGame
 			{

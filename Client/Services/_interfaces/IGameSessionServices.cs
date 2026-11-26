@@ -15,8 +15,8 @@ namespace Checkers.Client.Services
 		/// <summary>Raised off the UI thread whenever any of the above changes.</summary>
 		event Action? Changed;
 
-		/// <summary>Starts a match. Returns an error message, or null on success.</summary>
-		Task<string?> CreateMatchAsync();
+		/// <summary>Starts a match with the creator's settings. Returns an error message, or null on success.</summary>
+		Task<string?> CreateMatchAsync(MatchSettingsDto settings);
 		/// <summary>Joins or rejoins a match. Returns an error message, or null on success.</summary>
 		Task<string?> JoinMatchAsync(string matchCode);
 		/// <summary>Plays one step of a turn. Returns an error message, or null on success.</summary>

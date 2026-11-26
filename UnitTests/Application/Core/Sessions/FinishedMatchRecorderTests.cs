@@ -128,14 +128,18 @@ namespace UnitTests.Application.Core.Sessions
 		// Store → pull → replay: a whole live game is saved, read back by each player, and replayed
 		// move by move to the exact board the game ended on.
 		[Theory]
-		[InlineData(1)]
-		[InlineData(7)]
-		[InlineData(42)]
-		public async Task FinishedGame_CanBePulledBackAndReplayedToTheFinalBoard(int seed)
+		[InlineData(1, true, false)]
+		[InlineData(7, true, false)]
+		[InlineData(42, true, false)]
+		[InlineData(3, false, true)]
+		[InlineData(11, true, true)]
+		[InlineData(5, false, false)]
+		public async Task FinishedGame_CanBePulledBackAndReplayedToTheFinalBoard(int seed, bool forcedCaptures, bool flyingKings)
 		{
-			var (manager, recorder, code) = StartMatch(new CheckersGameRules());
+			var rules = new GameRuleOptions { ForcedCaptures = forcedCaptures, FlyingKings = flyingKings };
+			var (manager, recorder, code) = StartMatch(new CheckersGameRules(), new MatchSettingsDto { Rules = rules, TurnTimeLimitSeconds = 300 });
 			var random = new Random(seed);
-			var shadow = new Game();
+			var shadow = new Game(rules);
 			GameSessionDto session = null!;
 
 			while (!shadow.IsOver)
@@ -163,7 +167,10 @@ namespace UnitTests.Application.Core.Sessions
 				Assert.Equal(session.Moves,
 					match.Moves.Select(m => new GameMove(m.FromRow, m.FromCol, m.ToRow, m.ToCol)));
 
-				var replay = SessionReplay.FromMoves(match.Moves.Select(m => new GameMove(m.FromRow, m.FromCol, m.ToRow, m.ToCol)));
+				Assert.Equal(rules, match.Rules);
+				Assert.Equal(300, match.TurnTimeLimitSeconds);
+
+				var replay = SessionReplay.FromMoves(match.Moves.Select(m => new GameMove(m.FromRow, m.FromCol, m.ToRow, m.ToCol)), match.Rules);
 
 				Assert.True(replay.IsExact);
 				Assert.True(replay.Game.IsOver);
@@ -189,6 +196,27 @@ namespace UnitTests.Application.Core.Sessions
 			Assert.Empty(manager.GetActiveMatches(_black.Id));
 			Assert.Equal(MatchOutcome.Loss, Assert.Single((await _matchHistory.GetHistoryAsync(_white.Id)).Matches).Outcome);
 			Assert.Equal(MatchOutcome.Win, Assert.Single((await _matchHistory.GetHistoryAsync(_black.Id)).Matches).Outcome);
+		}
+
+		// The creator can sit on white, so the saved record must keep each player on their own side.
+		[Fact]
+		public async Task CreatorPlayingWhite_IsSavedOnTheWhiteSideWithStandardRules()
+		{
+			var manager = new GameSessionManager(new CheckersGameRules());
+			var recorder = new FinishedMatchRecorder(manager, _matchHistory);
+			var code = manager.Create(_white.Id, _white.Username, new MatchSettingsDto { CreatorColor = ColorChoice.White }).Session!.MatchCode;
+			manager.Join(code, _black.Id, _black.Username);
+			manager.MakeMove(code, _black.Id, BlackOpening);
+
+			await recorder.RecordIfFinishedAsync(manager.Resign(code, _white.Id).Session!);
+
+			var saved = await _context.MatchRecords.SingleAsync();
+			Assert.Equal(_black.Id, saved.BlackPlayerId);
+			Assert.Equal(_white.Id, saved.WhitePlayerId);
+			Assert.Equal(MatchResult.BlackWin, saved.Result);
+			Assert.True(saved.ForcedCaptures);
+			Assert.False(saved.FlyingKings);
+			Assert.Null(saved.TurnTimeLimitSeconds);
 		}
 
 		[Fact]
@@ -217,10 +245,10 @@ namespace UnitTests.Application.Core.Sessions
 			Assert.Null(await _matchHistory.GetMatchAsync(outsider.Id, saved!.MatchId!.Value));
 		}
 
-		private (GameSessionManager Manager, FinishedMatchRecorder Recorder, string Code) StartMatch(IGameRules rules)
+		private (GameSessionManager Manager, FinishedMatchRecorder Recorder, string Code) StartMatch(IGameRules rules, MatchSettingsDto? settings = null)
 		{
 			var manager = new GameSessionManager(rules);
-			var code = manager.Create(_black.Id, _black.Username).Session!.MatchCode;
+			var code = manager.Create(_black.Id, _black.Username, settings).Session!.MatchCode;
 			manager.Join(code, _white.Id, _white.Username);
 			return (manager, new FinishedMatchRecorder(manager, _matchHistory), code);
 		}
@@ -239,7 +267,7 @@ namespace UnitTests.Application.Core.Sessions
 		/// </summary>
 		private sealed class ScriptedRules(GameOutcome outcome) : IGameRules
 		{
-			public IRulesGame NewGame() => new ScriptedGame(outcome);
+			public IRulesGame NewGame(GameRuleOptions rules) => new ScriptedGame(outcome);
 
 			private sealed class ScriptedGame(GameOutcome outcome) : IRulesGame
 			{

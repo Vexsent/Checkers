@@ -38,15 +38,19 @@ namespace Checkers.Shared.GameModels
 		// array of moves that have been made in current game, can be read by outside classes (will be used for move history)
 		public IReadOnlyList<Move> Moves => _moves;
 
+		// The rule variations this game is played with (forced captures, flying kings).
+		public GameRuleOptions Rules { get; }
+
 		//code to start a game
-		public Game() : this(Board.CreateStandard()) { }
+		public Game(GameRuleOptions? rules = null) : this(Board.CreateStandard(), PlayerColor.Black, rules) { }
 
 
 		//Black always starts first in American checkers.
-		public Game(Board board, PlayerColor firstTurn = PlayerColor.Black)
+		public Game(Board board, PlayerColor firstTurn = PlayerColor.Black, GameRuleOptions? rules = null)
 		{
 			Board = board;
 			CurrentTurn = firstTurn;
+			Rules = rules ?? GameRuleOptions.Standard;
 			CheckForWinner();
 		}
 
@@ -62,7 +66,9 @@ namespace Checkers.Shared.GameModels
             //sees which pieces can jump, if any, and returns those moves. If none can jump, returns all possible steps.
             var jumps = pieces.SelectMany(JumpsFrom).ToList();
             //if a jump is a avilable, then a piece must jump. (Rule of American Checkers)
-            return jumps.Count > 0 ? jumps : pieces.SelectMany(StepsFrom).ToList();
+            if (jumps.Count > 0 && Rules.ForcedCaptures) return jumps;
+            //with forced captures off, jumps are just more options alongside the ordinary steps.
+            return [.. jumps, .. pieces.SelectMany(StepsFrom)];
 		}
 
         //checks all moves for a specific piece.
@@ -87,7 +93,7 @@ namespace Checkers.Shared.GameModels
             if (move is null)
 			{
 				if (JumpingPiece is { } jumper && jumper != from) return MoveResult.Fail(ContinueJumpError);
-				if (legal.Any(m => m.IsJump)) return MoveResult.Fail(MustJumpError);
+				if (Rules.ForcedCaptures && legal.Any(m => m.IsJump)) return MoveResult.Fail(MustJumpError);
 				return MoveResult.Fail(IllegalMoveError);
 			}
 
@@ -187,28 +193,48 @@ namespace Checkers.Shared.GameModels
 						yield return new Square(r, c);
 		}
 
+		// With flying kings on, a king slides along the diagonal instead of moving one square.
+		private bool Flies(Square from) => Rules.FlyingKings && IsKing(Board[from]);
+
 		private IEnumerable<Move> StepsFrom(Square from)
 		{
+			var flies = Flies(from);
 			foreach (var (dr, dc) in Directions(Board[from]))
 			{
 				var to = new Square(from.Row + dr, from.Col + dc);
-				if (Board.IsOnBoard(to) && Board[to] == GamePieces.Empty)
+				while (Board.IsOnBoard(to) && Board[to] == GamePieces.Empty)
+				{
 					yield return new Move(from, to);
+					if (!flies) break;
+					to = new Square(to.Row + dr, to.Col + dc);
+				}
 			}
 		}
 
 		private IEnumerable<Move> JumpsFrom(Square from)
 		{
 			var owner = OwnerOf(Board[from]);
+			var flies = Flies(from);
 			foreach (var (dr, dc) in Directions(Board[from]))
 			{
+				// A flying king may cross any run of empty squares to reach the piece it captures.
 				var over = new Square(from.Row + dr, from.Col + dc);
-				var to = new Square(from.Row + 2 * dr, from.Col + 2 * dc);
-				if (!Board.IsOnBoard(to) || Board[to] != GamePieces.Empty) continue;
+				while (flies && Board.IsOnBoard(over) && Board[over] == GamePieces.Empty)
+					over = new Square(over.Row + dr, over.Col + dc);
+
+				if (!Board.IsOnBoard(over)) continue;
 
 				var jumped = OwnerOf(Board[over]);
-				if (jumped is not null && jumped != owner)
+				if (jumped is null || jumped == owner) continue;
+
+				// Land on the square just past the captured piece, or (flying) any empty square beyond it.
+				var to = new Square(over.Row + dr, over.Col + dc);
+				while (Board.IsOnBoard(to) && Board[to] == GamePieces.Empty)
+				{
 					yield return new Move(from, to, over);
+					if (!flies) break;
+					to = new Square(to.Row + dr, to.Col + dc);
+				}
 			}
 		}
 

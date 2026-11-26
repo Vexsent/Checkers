@@ -39,7 +39,7 @@ namespace Checkers.Client.Services
 
 		public static SessionReplay From(GameSessionDto session)
 		{
-			var (game, turns, allLegal) = Play(session.Moves);
+			var (game, turns, allLegal) = Play(session.Moves, session.Rules);
 
 			if (!allLegal || !game.Board.ToSquares().SequenceEqual(session.Squares))
 				return FromBoard(session);
@@ -51,10 +51,11 @@ namespace Checkers.Client.Services
 		/// Replays a saved match's moves from the starting board. If a move is rejected, replay stops
 		/// there: <see cref="Turns"/> holds the turns before it and <see cref="IsExact"/> is false.
 		/// A multi-jump the match ended in the middle of (a resignation) is included as a final turn.
+		/// Pass the rules the match was played with, or its moves may not replay.
 		/// </summary>
-		public static SessionReplay FromMoves(IEnumerable<GameMove> moves)
+		public static SessionReplay FromMoves(IEnumerable<GameMove> moves, GameRuleOptions? rules = null)
 		{
-			var (game, turns, allLegal) = Play(moves, includeUnfinishedTurn: true);
+			var (game, turns, allLegal) = Play(moves, rules, includeUnfinishedTurn: true);
 			return new SessionReplay(game, turns, isExact: allLegal);
 		}
 
@@ -63,13 +64,14 @@ namespace Checkers.Client.Services
 		/// Stops at the first move the engine rejects.
 		/// </summary>
 		private static (Game Game, List<ReplayedTurn> Turns, bool AllLegal) Play(
-			IEnumerable<GameMove> moves, bool includeUnfinishedTurn = false)
+			IEnumerable<GameMove> moves, GameRuleOptions? rules, bool includeUnfinishedTurn = false)
 		{
 			// Live matches start like CheckersGameRules: the standard board with black to move.
-			var game = new Game();
+			var game = new Game(rules);
 			var turns = new List<ReplayedTurn>();
 			List<BoardSquare>? path = null;
 			var piece = GamePieces.Empty;
+			var isJump = false;
 			var allLegal = true;
 
 			foreach (var move in moves)
@@ -92,24 +94,28 @@ namespace Checkers.Client.Services
 					break;
 				}
 
+				// A turn's first step says whether it's a capture; a flying king's distance can't.
+				if (path.Count == 1)
+					isJump = game.Moves[^1].IsJump;
+
 				path.Add(to);
 				if (game.CurrentTurn != mover || game.IsOver)
 				{
-					turns.Add(Turn(game, piece, path));
+					turns.Add(Turn(game, piece, path, isJump));
 					path = null;
 				}
 			}
 
 			if (includeUnfinishedTurn && path is not null)
-				turns.Add(Turn(game, piece, path));
+				turns.Add(Turn(game, piece, path, isJump));
 
 			return (game, turns, allLegal);
 		}
 
-		private static ReplayedTurn Turn(Game game, GamePieces piece, List<BoardSquare> path)
+		private static ReplayedTurn Turn(Game game, GamePieces piece, List<BoardSquare> path, bool isJump)
 		{
 			var crowned = !Game.IsKing(piece) && Game.IsKing(game.Board[path[^1]]);
-			return new ReplayedTurn(piece, path, crowned, game.Board.ToSquares());
+			return new ReplayedTurn(piece, path, crowned, game.Board.ToSquares(), isJump);
 		}
 
 		/// <summary>
@@ -127,17 +133,17 @@ namespace Checkers.Client.Services
 			foreach (var turn in Turns.Skip(relay.Moves.Count))
 			{
 				var path = turn.Path.Select(square => new RelaySquare(square.Row, square.Col)).ToList();
-				relay.RecordMove(turn.Piece, path, turn.Crowned);
+				relay.RecordMove(turn.Piece, path, turn.Crowned, turn.IsJump);
 			}
 		}
 
 		private static SessionReplay FromBoard(GameSessionDto session) =>
-			new(new Game(Board.FromSquares(session.BoardSize, session.Squares), session.CurrentPlayer), [], isExact: false);
+			new(new Game(Board.FromSquares(session.BoardSize, session.Squares), session.CurrentPlayer, session.Rules), [], isExact: false);
 	}
 
 	/// <summary>
 	/// One completed turn: the piece as it started, its starting square and every landing square,
-	/// and the board right after it (row by row, like <see cref="Board.ToSquares"/>).
+	/// the board right after it (row by row, like <see cref="Board.ToSquares"/>), and whether it captured.
 	/// </summary>
-	public sealed record ReplayedTurn(GamePieces Piece, IReadOnlyList<BoardSquare> Path, bool Crowned, GamePieces[] BoardAfter);
+	public sealed record ReplayedTurn(GamePieces Piece, IReadOnlyList<BoardSquare> Path, bool Crowned, GamePieces[] BoardAfter, bool IsJump);
 }

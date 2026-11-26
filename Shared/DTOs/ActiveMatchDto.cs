@@ -29,5 +29,9 @@ namespace Checkers.Shared.DTOs
 		/// When the opponent joined. Null while waiting for one.
 		/// </summary>
 		public DateTime? StartedAtUtc { get; set; }
+		/// <summary>
+		/// When whoever's turn it is automatically resigns. Null with no turn time limit.
+		/// </summary>
+		public DateTime? TurnDeadlineUtc { get; set; }
 	}
 }

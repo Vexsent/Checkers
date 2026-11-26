@@ -175,6 +175,61 @@ namespace UnitTests.Client.Services
 			Assert.True(game.IsOver);
 		}
 
+		// Variant rules: the replay has to use the match's rules, or a flying king's slide or a
+		// skipped optional capture would look illegal.
+		[Theory]
+		[InlineData(false, true, 1)]
+		[InlineData(false, true, 2)]
+		[InlineData(true, true, 3)]
+		[InlineData(false, false, 4)]
+		public void VariantRules_LiveAndSavedReplaysMatchTheEngine(bool forcedCaptures, bool flyingKings, int seed)
+		{
+			var rules = new GameRuleOptions { ForcedCaptures = forcedCaptures, FlyingKings = flyingKings };
+			var (game, moves) = PlayRandom(rules, seed);
+
+			var live = SessionReplay.From(SessionFor(game, moves, rules));
+			var saved = SessionReplay.FromMoves(moves, rules);
+
+			Assert.True(live.IsExact);
+			Assert.True(saved.IsExact);
+			Assert.Equal(game.Board.ToSquares(), saved.Game.Board.ToSquares());
+			Assert.Equal(game.GetLegalMoves(), live.Game.GetLegalMoves());
+			Assert.Equal(rules, live.Game.Rules);
+		}
+
+		[Fact]
+		public void FlyingKingGame_ReplayedWithStandardRules_IsNotExact()
+		{
+			var rules = new GameRuleOptions { FlyingKings = true };
+			// A seeded game where a king actually moved more than two rows at once.
+			var (_, moves) = Enumerable.Range(1, 50)
+				.Select(seed => PlayRandom(rules, seed))
+				.First(g => g.Moves.Any(m => Math.Abs(m.ToRow - m.FromRow) > 2));
+
+			Assert.False(SessionReplay.FromMoves(moves).IsExact);
+			Assert.True(SessionReplay.FromMoves(moves, rules).IsExact);
+		}
+
+		[Fact]
+		public void FlyingKingLongCapture_IsWrittenAsAJumpInTheMoveList()
+		{
+			var rules = new GameRuleOptions { FlyingKings = true };
+			var (game, moves) = Enumerable.Range(1, 50)
+				.Select(seed => PlayRandom(rules, seed))
+				.First(g => g.Game.Moves.Any(IsLongCapture));
+			var replay = SessionReplay.From(SessionFor(game, moves, rules));
+			var relay = new RelayService();
+
+			replay.UpdateMoveList(relay);
+
+			var capture = game.Moves.First(IsLongCapture);
+			var index = replay.Turns.ToList().FindIndex(t => t.IsJump && t.Path.Contains(capture.From) && t.Path.Contains(capture.To));
+			Assert.True(index >= 0);
+			Assert.Contains("x", relay.Moves[index].Text);
+		}
+
+		private static bool IsLongCapture(Move move) => move.IsJump && Math.Abs(move.To.Row - move.From.Row) > 2;
+
 		[Fact]
 		public void FromMoves_IllegalMove_StopsBeforeIt()
 		{
@@ -243,7 +298,7 @@ namespace UnitTests.Client.Services
 			return (game, [.. moves]);
 		}
 
-		private static GameSessionDto SessionFor(Game game, IEnumerable<GameMove> moves) => new()
+		private static GameSessionDto SessionFor(Game game, IEnumerable<GameMove> moves, GameRuleOptions? rules = null) => new()
 		{
 			MatchCode = "ABC123",
 			Status = SessionStatus.InProgress,
@@ -251,6 +306,23 @@ namespace UnitTests.Client.Services
 			BoardSize = game.Board.Size,
 			Squares = game.Board.ToSquares(),
 			Moves = [.. moves],
+			Rules = rules ?? GameRuleOptions.Standard,
 		};
+
+		private static (Game Game, List<GameMove> Moves) PlayRandom(GameRuleOptions rules, int seed)
+		{
+			var random = new Random(seed);
+			var game = new Game(rules);
+			var moves = new List<GameMove>();
+			while (!game.IsOver && moves.Count < 300)
+			{
+				var legal = game.GetLegalMoves();
+				var move = legal[random.Next(legal.Count)];
+				Assert.True(game.TryMove(move.From, move.To).Success);
+				moves.Add(new GameMove(move.From.Row, move.From.Col, move.To.Row, move.To.Col));
+			}
+
+			return (game, moves);
+		}
 	}
 }

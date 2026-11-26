@@ -60,12 +60,12 @@ namespace Checkers.Client.Pages
 			match = await MatchHistoryServices.GetMatchAsync(MatchId);
 			replay = match is null
 				? null
-				: SessionReplay.FromMoves(match.Moves.Select(m => new GameMove(m.FromRow, m.FromCol, m.ToRow, m.ToCol)));
+				: SessionReplay.FromMoves(match.Moves.Select(m => new GameMove(m.FromRow, m.FromCol, m.ToRow, m.ToCol)), match.Rules);
 
 			// The relay's notation, so moves read the same as during a live match.
 			var notation = new RelayService();
 			moveTexts = replay?.Turns
-				.Select(turn => notation.FormatMove(turn.Piece, turn.Path.Select(s => new RelaySquare(s.Row, s.Col)).ToList(), turn.Crowned))
+				.Select(turn => notation.FormatMove(turn.Piece, turn.Path.Select(s => new RelaySquare(s.Row, s.Col)).ToList(), turn.Crowned, turn.IsJump))
 				.ToList() ?? [];
 
 			step = 0;

@@ -69,9 +69,13 @@ namespace Checkers.Client.Pages
 		private static string ActiveStatus(ActiveMatchDto match) => match switch
 		{
 			{ Status: SessionStatus.WaitingForOpponent } => "Share the code so your opponent can join.",
-			{ IsYourTurn: true } => $"Your turn · {match.MoveCount} moves played",
-			_ => $"Opponent's turn · {match.MoveCount} moves played",
+			{ IsYourTurn: true } => $"Your turn · {match.MoveCount} moves played{TimeLeft(match)}",
+			_ => $"Opponent's turn · {match.MoveCount} moves played{TimeLeft(match)}",
 		};
+
+		private static string TimeLeft(ActiveMatchDto match) => match.TurnDeadlineUtc is { } deadline
+			? $" · {MatchTimeText.Remaining(deadline - DateTime.UtcNow)} left"
+			: string.Empty;
 
 		private static BadgeStyle OutcomeStyle(MatchOutcome outcome) => outcome switch
 		{

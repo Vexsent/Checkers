@@ -41,6 +41,32 @@ namespace Checkers.Client.Pages
 		private Square? selected;
 		private string? drawNotice;
 		private GameSessionDto? lastSession;
+		private Timer? clockTimer;
+
+		// Match settings the creator picks.
+		private ColorChoice creatorColor = ColorChoice.Black;
+		private bool forcedCaptures = true;
+		private bool flyingKings;
+		private bool useTurnLimit;
+		private int turnLimitAmount = 1;
+		private int turnLimitUnitSeconds = 60 * 60;
+
+		private sealed record TurnLimitUnit(string Name, int Seconds);
+
+		private static readonly TurnLimitUnit[] TurnLimitUnits =
+		[
+			new("seconds", 1),
+			new("minutes", 60),
+			new("hours", 60 * 60),
+			new("days", 24 * 60 * 60),
+		];
+
+		private long TurnLimitSeconds => (long)turnLimitAmount * turnLimitUnitSeconds;
+
+		private string? TurnLimitError => useTurnLimit
+			&& (TurnLimitSeconds < MatchSettingsDto.MinTurnTimeLimitSeconds || TurnLimitSeconds > MatchSettingsDto.MaxTurnTimeLimitSeconds)
+			? MatchSettingsDto.TurnTimeLimitError
+			: null;
 
 		private GameSessionDto? Session => Sessions.Session;
 		private Board CurrentBoard => Board.FromSquares(Session!.BoardSize, Session.Squares);
@@ -63,10 +89,20 @@ namespace Checkers.Client.Pages
 			{ Status: SessionStatus.WaitingForOpponent } => "Waiting for your opponent to join. Share the code above.",
 			{ Status: SessionStatus.InProgress } => IsMyTurn ? "Your turn" : "Opponent's turn",
 			{ Outcome: GameOutcome.Draw } => "The game is a draw.",
-			{ Outcome: GameOutcome.BlackWon } => MyColor == PlayerColor.Black ? "You won!" : "You lost.",
-			{ Outcome: GameOutcome.WhiteWon } => MyColor == PlayerColor.White ? "You won!" : "You lost.",
+			{ Outcome: GameOutcome.BlackWon or GameOutcome.WhiteWon } session => EndText(session),
 			_ => string.Empty
 		};
+
+		private string EndText(GameSessionDto session)
+		{
+			var won = (session.Outcome == GameOutcome.BlackWon) == (MyColor == PlayerColor.Black);
+			return session.EndReason switch
+			{
+				GameEndReason.Timeout => won ? "You won! Your opponent ran out of time." : "You lost. You ran out of time.",
+				GameEndReason.Resignation => won ? "You won! Your opponent resigned." : "You lost. You resigned.",
+				_ => won ? "You won!" : "You lost.",
+			};
+		}
 
 		protected override async Task OnInitializedAsync()
 		{
@@ -74,6 +110,12 @@ namespace Checkers.Client.Pages
 			int.TryParse(state.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out myUserId);
 			Sessions.Changed += OnSessionChanged;
 			MoveList.MovesChanged += OnSessionChanged;
+			// Redraws the turn clock once a second while there is one to show.
+			clockTimer = new Timer(_ =>
+			{
+				if (Session is { Status: SessionStatus.InProgress, TurnDeadlineUtc: not null })
+					_ = InvokeAsync(StateHasChanged);
+			}, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
 
 			if (!string.IsNullOrWhiteSpace(Code))
 			{
@@ -131,7 +173,12 @@ namespace Checkers.Client.Pages
 			}
 		}
 
-		private Task CreateMatch() => RunAsync(Sessions.CreateMatchAsync);
+		private Task CreateMatch() => RunAsync(() => Sessions.CreateMatchAsync(new MatchSettingsDto
+		{
+			CreatorColor = creatorColor,
+			Rules = new GameRuleOptions { ForcedCaptures = forcedCaptures, FlyingKings = flyingKings },
+			TurnTimeLimitSeconds = useTurnLimit ? (int)TurnLimitSeconds : null,
+		}));
 
 		private Task JoinMatch() => RunAsync(() => Sessions.JoinMatchAsync(joinCode));
 
@@ -197,6 +244,7 @@ namespace Checkers.Client.Pages
 
 		public void Dispose()
 		{
+			clockTimer?.Dispose();
 			Sessions.Changed -= OnSessionChanged;
 			MoveList.MovesChanged -= OnSessionChanged;
 		}

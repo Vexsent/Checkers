@@ -25,7 +25,7 @@ namespace Checkers.Client.Services
         /// are filled in here. Returns the new entry so it can be sent to the opponent.
         /// </summary>
         /// <exception cref="ArgumentException">The path has fewer than 2 squares, or the piece is Empty.</exception>
-        MoveEntry RecordMove(GamePieces piece, IReadOnlyList<Square> path, bool crowned = false);
+        MoveEntry RecordMove(GamePieces piece, IReadOnlyList<Square> path, bool crowned = false, bool? isJump = null);
 
         /// <summary>Adds an entry that's already complete, e.g. the opponent's move.</summary>
         void AddMove(MoveEntry entry);
@@ -41,7 +41,7 @@ namespace Checkers.Client.Services
         /// followed by every square it landed on.
         /// Examples: "WP a3-b4", "BP c5xe3", "WK c1xe3xg5 (x2)", "WP b7-a8=K".
         /// </summary>
-        string FormatMove(GamePieces piece, IReadOnlyList<Square> path, bool crowned = false);
+        string FormatMove(GamePieces piece, IReadOnlyList<Square> path, bool crowned = false, bool? isJump = null);
     }
 
     /// <summary>

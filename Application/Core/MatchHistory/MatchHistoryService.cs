@@ -3,6 +3,7 @@ using Checkers.Domain.Entities;
 using Checkers.Persistence.Data.IRepositories;
 using Checkers.Shared.DTOs;
 using Checkers.Shared.Enums;
+using Checkers.Shared.GameModels;
 
 namespace Checkers.Application.Core.MatchHistory
 {
@@ -59,6 +60,9 @@ namespace Checkers.Application.Core.MatchHistory
 				Result = request.Result,
 				StartedAtUtc = request.StartedAtUtc,
 				EndedAtUtc = request.EndedAtUtc,
+				ForcedCaptures = (request.Rules ?? GameRuleOptions.Standard).ForcedCaptures,
+				FlyingKings = (request.Rules ?? GameRuleOptions.Standard).FlyingKings,
+				TurnTimeLimitSeconds = request.TurnTimeLimitSeconds,
 				Moves = request.Moves.Select((mv, i) => new MatchRecordMove
 				{
 					MoveNumber = i + 1,
@@ -113,6 +117,8 @@ namespace Checkers.Application.Core.MatchHistory
 			var replay = FillSummary(new MatchReplayDto(), match, userId);
 			replay.BlackPlayerName = match.BlackPlayer?.Username ?? MatchSummaryDto.ComputerOpponentName;
 			replay.WhitePlayerName = match.WhitePlayer?.Username ?? MatchSummaryDto.ComputerOpponentName;
+			replay.Rules = new GameRuleOptions { ForcedCaptures = match.ForcedCaptures, FlyingKings = match.FlyingKings };
+			replay.TurnTimeLimitSeconds = match.TurnTimeLimitSeconds;
 			replay.Moves = match.Moves
 				.OrderBy(mv => mv.MoveNumber)
 				.Select(mv => new MatchMoveDto

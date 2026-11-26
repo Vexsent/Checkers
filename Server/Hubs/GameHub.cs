@@ -21,9 +21,9 @@ namespace Checkers.Server.Hubs
 		private int UserId => int.Parse(Context.User!.FindFirstValue(ClaimTypes.NameIdentifier)!);
 		private string Username => Context.User!.FindFirstValue(ClaimTypes.Name)!;
 
-		public async Task<SessionResult> CreateMatch()
+		public async Task<SessionResult> CreateMatch(MatchSettingsDto? settings)
 		{
-			var result = sessions.Create(UserId, Username);
+			var result = sessions.Create(UserId, Username, settings);
 			if (result.Session is { } session)
 				await Groups.AddToGroupAsync(Context.ConnectionId, session.MatchCode);
 

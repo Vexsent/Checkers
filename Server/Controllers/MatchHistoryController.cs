@@ -38,11 +38,12 @@ namespace Checkers.Server.Controllers
 				return Unauthorized();
 
 			var result = sessions.Resign(matchCode, userId);
-			if (result.Session is not { } session)
-				return BadRequest(new[] { result.Error });
 
-			await broadcaster.PublishAsync(session);
-			return Ok(session);
+			// A turn that already timed out comes back finished with an error: still publish it.
+			if (result.Session is { } session)
+				await broadcaster.PublishAsync(session);
+
+			return result.Error is { } error ? BadRequest(new[] { error }) : Ok(result.Session);
 		}
 
 		/// <summary>

@@ -16,6 +16,18 @@ namespace Checkers.Domain.Entities
 		public DateTime StartedAtUtc { get; set; }
 		public DateTime EndedAtUtc { get; set; }
 		/// <summary>
+		/// False if captures were optional in this match. Needed to replay its moves.
+		/// </summary>
+		public bool ForcedCaptures { get; set; } = true;
+		/// <summary>
+		/// True if kings could move and capture any distance along a diagonal. Needed to replay its moves.
+		/// </summary>
+		public bool FlyingKings { get; set; }
+		/// <summary>
+		/// Seconds each player had per turn, or null for no limit.
+		/// </summary>
+		public int? TurnTimeLimitSeconds { get; set; }
+		/// <summary>
 		/// Every move in the order it was played, kept so the match can be replayed later.
 		/// </summary>
 		public virtual List<MatchRecordMove> Moves { get; set; } = [];
